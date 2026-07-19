@@ -3,6 +3,8 @@
 // submission locally, useful for testing before the backend exists.
 const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH56EVZ9tPDP7A5jg3B9GcCOu1GnDsVwL2MXWDaCJqxltXQQ/exec";
 
+const PENDING_STORAGE_KEY = "pendingOrders";
+
 const state = {
   products: [],
   pending: new Map(), // sku -> qty
@@ -33,12 +35,41 @@ function init() {
     localStorage.setItem("requesterName", els.requester.value.trim());
   });
 
+  restorePending();
+  updateCartBar();
+
   els.search.addEventListener("input", () => renderGrid());
   els.cartSubmitBtn.addEventListener("click", openConfirm);
   els.confirmCancelBtn.addEventListener("click", closeConfirm);
   els.confirmSubmitBtn.addEventListener("click", submitOrder);
 
+  // Warn before leaving so nobody loses flagged reorders by accidentally
+  // closing the tab or navigating away without hitting Submit Order.
+  window.addEventListener("beforeunload", (e) => {
+    if (state.pending.size > 0) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+
   loadProducts();
+}
+
+function restorePending() {
+  try {
+    const raw = localStorage.getItem(PENDING_STORAGE_KEY);
+    if (!raw) return;
+    const entries = JSON.parse(raw);
+    if (Array.isArray(entries)) {
+      state.pending = new Map(entries);
+    }
+  } catch (err) {
+    console.error("Failed to restore pending orders", err);
+  }
+}
+
+function savePending() {
+  localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(Array.from(state.pending.entries())));
 }
 
 async function loadProducts() {
@@ -132,6 +163,7 @@ function changeQty(sku, delta) {
   } else {
     state.pending.set(sku, next);
   }
+  savePending();
   renderGrid();
   updateCartBar();
 }
@@ -192,6 +224,7 @@ async function submitOrder() {
     }
 
     state.pending.clear();
+    savePending();
     closeConfirm();
     updateCartBar();
     renderGrid();

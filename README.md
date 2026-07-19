@@ -60,3 +60,5 @@ Save images into the `images/` folder using the filename referenced in the `Imag
 - Tapping **+**/**−** on a product only adjusts a local counter — nothing is sent yet.
 - Once anything is flagged, a bar appears at the bottom to **Submit Order**.
 - Submitting sends one batched request: it logs a row per item in `Requests` and sends a single summary email, rather than emailing on every button tap.
+- Flagged quantities are saved to the device's local storage as you go, so closing the tab or reloading the page won't lose them — and the browser will warn before letting anyone navigate away or close the tab while something is still unsubmitted.
+- Each device/browser is independent (name, search, and pending quantities aren't shared between devices), so multiple people can use the page from their own phones at the same time without conflicting. Submissions from different devices at the same moment are queued safely on the backend so none get lost.

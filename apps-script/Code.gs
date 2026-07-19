@@ -27,7 +27,17 @@ function doPost(e) {
     return jsonResponse({ ok: false, error: "requester and items are required" });
   }
 
-  appendRequests(requester, items);
+  // Multiple people can submit from different devices at the same moment.
+  // Without a lock, two concurrent appends could both compute the same
+  // "next row" and one submission would silently overwrite the other.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    appendRequests(requester, items);
+  } finally {
+    lock.releaseLock();
+  }
+
   sendNotificationEmail(requester, items);
 
   return jsonResponse({ ok: true });
