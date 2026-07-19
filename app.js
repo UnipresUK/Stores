@@ -1,7 +1,7 @@
 // Set this to your deployed Apps Script Web App URL (ends in /exec).
 // Left blank, the page falls back to products.sample.json and simulates
 // submission locally, useful for testing before the backend exists.
-const API_URL = "";
+const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH56EVZ9tPDP7A5jg3B9GcCOu1GnDsVwL2MXWDaCJqxltXQQ/exec";
 
 const state = {
   products: [],
