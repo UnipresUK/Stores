@@ -13,6 +13,7 @@ const state = {
 const els = {
   requester: document.getElementById("requester"),
   search: document.getElementById("search"),
+  lowStockOnly: document.getElementById("lowStockOnly"),
   status: document.getElementById("status"),
   grid: document.getElementById("productGrid"),
   cartBar: document.getElementById("cartBar"),
@@ -39,6 +40,7 @@ function init() {
   updateCartBar();
 
   els.search.addEventListener("input", () => renderGrid());
+  els.lowStockOnly.addEventListener("change", () => renderGrid());
   els.cartSubmitBtn.addEventListener("click", openConfirm);
   els.confirmCancelBtn.addEventListener("click", closeConfirm);
   els.confirmSubmitBtn.addEventListener("click", submitOrder);
@@ -93,9 +95,20 @@ function matchesSearch(product, term) {
   return haystack.includes(term);
 }
 
+function isLowStock(product) {
+  const min = Number(product.minLevel);
+  const current = Number(product.currentStock);
+  if (product.minLevel === "" || product.minLevel == null || Number.isNaN(min)) return false;
+  if (Number.isNaN(current)) return false;
+  return current <= min;
+}
+
 function renderGrid() {
   const term = els.search.value.trim().toLowerCase();
-  const filtered = state.products.filter((p) => matchesSearch(p, term));
+  const lowStockOnly = els.lowStockOnly.checked;
+  const filtered = state.products
+    .filter((p) => matchesSearch(p, term))
+    .filter((p) => !lowStockOnly || isLowStock(p));
 
   els.grid.innerHTML = "";
   for (const product of filtered) {
@@ -126,6 +139,7 @@ function renderCard(product) {
   info.className = "product-info";
   info.innerHTML = `
     <span class="location-badge">${escapeHtml(product.location)}</span>
+    ${isLowStock(product) ? '<span class="low-stock-badge">Low stock</span>' : ""}
     <div class="sku">${escapeHtml(product.sku)}</div>
     <div class="desc">${escapeHtml(product.description)}</div>
     <div class="stock-line">In stock: ${escapeHtml(String(product.currentStock))}</div>

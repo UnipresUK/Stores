@@ -53,6 +53,7 @@ function readProducts() {
     description: headers.indexOf("description"),
     location: headers.indexOf("location"),
     currentStock: headers.indexOf("current stock"),
+    minLevel: headers.indexOf("min level"),
     imageFilename: headers.indexOf("image filename"),
   };
 
@@ -65,6 +66,7 @@ function readProducts() {
       description: col.description >= 0 ? row[col.description].toString() : "",
       location: col.location >= 0 ? row[col.location].toString() : "",
       currentStock: col.currentStock >= 0 ? row[col.currentStock] : "",
+      minLevel: col.minLevel >= 0 ? row[col.minLevel] : "",
       imageFilename: col.imageFilename >= 0 ? row[col.imageFilename].toString() : "",
     });
   }

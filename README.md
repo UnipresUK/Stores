@@ -10,11 +10,11 @@ Create a new Google Sheet with two tabs:
 
 **`Products`** — one row per SKU:
 
-| SKU | Description | Location | Current Stock | Image Filename |
-|-----|-------------|----------|----------------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | A1 | 4 | sku-1001.jpg |
+| SKU | Description | Location | Current Stock | Min Level | Image Filename |
+|-----|-------------|----------|----------------|-----------|-----------------|
+| SKU-1001 | M8 Hex Bolt 40mm | A1 | 4 | 5 | sku-1001.jpg |
 
-Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
+Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon. Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
 
 **`Requests`** — leave empty except for a header row, Apps Script appends to it:
 
