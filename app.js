@@ -91,7 +91,7 @@ async function loadProducts() {
 
 function matchesSearch(product, term) {
   if (!term) return true;
-  const haystack = `${product.sku} ${product.description} ${product.location}`.toLowerCase();
+  const haystack = `${product.sku} ${product.description} ${product.location} ${product.category || ""} ${product.oem || ""} ${product.supplier || ""}`.toLowerCase();
   return haystack.includes(term);
 }
 
@@ -135,14 +135,27 @@ function renderCard(product) {
   img.onerror = () => { img.onerror = null; img.src = "images/placeholder.svg"; };
   card.appendChild(img);
 
+  const unitSuffix = product.unit ? ` ${product.unit}` : "";
+  const oemLine = product.oem ? `<div class="meta-line">OEM: ${escapeHtml(product.oem)}</div>` : "";
+  const supplierLine = product.supplier || product.supplierLink
+    ? `<div class="meta-line">Supplier: ${
+        product.supplierLink
+          ? `<a href="${escapeAttr(product.supplierLink)}" target="_blank" rel="noopener">${escapeHtml(product.supplier || "Link")}</a>`
+          : escapeHtml(product.supplier)
+      }</div>`
+    : "";
+
   const info = document.createElement("div");
   info.className = "product-info";
   info.innerHTML = `
     <span class="location-badge">${escapeHtml(product.location)}</span>
+    ${product.category ? `<span class="category-badge">${escapeHtml(product.category)}</span>` : ""}
     ${isLowStock(product) ? '<span class="low-stock-badge">Low stock</span>' : ""}
     <div class="sku">${escapeHtml(product.sku)}</div>
     <div class="desc">${escapeHtml(product.description)}</div>
-    <div class="stock-line">In stock: ${escapeHtml(String(product.currentStock))}</div>
+    ${oemLine}
+    ${supplierLine}
+    <div class="stock-line">In stock: ${escapeHtml(String(product.currentStock))}${escapeHtml(unitSuffix)}</div>
   `;
   card.appendChild(info);
 
@@ -264,4 +277,8 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str ?? "";
   return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }

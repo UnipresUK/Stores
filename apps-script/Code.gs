@@ -51,9 +51,14 @@ function readProducts() {
   var col = {
     sku: headers.indexOf("sku"),
     description: headers.indexOf("description"),
+    category: headers.indexOf("category"),
+    oem: headers.indexOf("oem"),
+    supplier: headers.indexOf("supplier"),
+    supplierLink: headers.indexOf("supplier link"),
     location: headers.indexOf("location"),
     currentStock: headers.indexOf("current stock"),
     minLevel: headers.indexOf("min level"),
+    unit: headers.indexOf("unit"),
     imageFilename: headers.indexOf("image filename"),
   };
 
@@ -64,9 +69,14 @@ function readProducts() {
     products.push({
       sku: row[col.sku].toString(),
       description: col.description >= 0 ? row[col.description].toString() : "",
+      category: col.category >= 0 ? row[col.category].toString() : "",
+      oem: col.oem >= 0 ? row[col.oem].toString() : "",
+      supplier: col.supplier >= 0 ? row[col.supplier].toString() : "",
+      supplierLink: col.supplierLink >= 0 ? row[col.supplierLink].toString() : "",
       location: col.location >= 0 ? row[col.location].toString() : "",
       currentStock: col.currentStock >= 0 ? row[col.currentStock] : "",
       minLevel: col.minLevel >= 0 ? row[col.minLevel] : "",
+      unit: col.unit >= 0 ? row[col.unit].toString() : "",
       imageFilename: col.imageFilename >= 0 ? row[col.imageFilename].toString() : "",
     });
   }

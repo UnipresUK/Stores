@@ -8,13 +8,17 @@ A QR-code-friendly page for the engineering team to browse stock locations (A1, 
 
 Create a new Google Sheet with two tabs:
 
-**`Products`** — one row per SKU:
+**`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
-| SKU | Description | Location | Current Stock | Min Level | Image Filename |
-|-----|-------------|----------|----------------|-----------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | A1 | 4 | 5 | sku-1001.jpg |
+| SKU | Description | Category | OEM | Supplier | Supplier Link | Location | Current Stock | Min Level | Unit | Image Filename |
+|-----|-------------|----------|-----|----------|----------------|----------|----------------|-----------|------|-----------------|
+| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | ISO 4017 | RS Online | https://... | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
 
-Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon. Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
+- Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
+- Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
+- `Category`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches).
+- `Supplier Link` (optional) renders as a clickable link on the product card so whoever's ordering can jump straight to the supplier's page.
+- `Unit` (optional, e.g. "each", "box of 100") is shown next to the stock count so there's no ambiguity about what a "+1" reorder actually represents.
 
 **`Requests`** — leave empty except for a header row, Apps Script appends to it:
 
