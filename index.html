@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stores Management</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Stores Management</h1>
+
+  <div class="field">
+    <label for="requester">Your name</label>
+    <input id="requester" list="requesterList" placeholder="Select or type your name" autocomplete="off">
+    <datalist id="requesterList">
+      <option value="Sam Pascoe">
+      <option value="Rob Reay">
+      <option value="Jordan Howe">
+      <option value="Megan Gorman">
+      <option value="Ian Jukes">
+      <option value="Daniel Hall">
+      <option value="Dave Rudd">
+      <option value="Gary Trueman">
+      <option value="Tim Belsey">
+      <option value="Waki-san">
+    </datalist>
+  </div>
+
+  <div class="field">
+    <label for="search">Search</label>
+    <input id="search" type="search" placeholder="Search by SKU, description, or location (e.g. A1)" autocomplete="off">
+  </div>
+</header>
+
+<main>
+  <p id="status" class="status"></p>
+  <div id="productGrid" class="product-grid"></div>
+</main>
+
+<div id="cartBar" class="cart-bar hidden">
+  <span id="cartCount"></span>
+  <button id="cartSubmitBtn" type="button">Submit Order</button>
+</div>
+
+<div id="confirmOverlay" class="overlay hidden">
+  <div class="confirm-card">
+    <h2>Confirm order</h2>
+    <p>Requester: <strong id="confirmRequester"></strong></p>
+    <ul id="confirmList" class="confirm-list"></ul>
+    <div class="confirm-actions">
+      <button id="confirmCancelBtn" type="button" class="secondary">Cancel</button>
+      <button id="confirmSubmitBtn" type="button">Confirm &amp; Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
