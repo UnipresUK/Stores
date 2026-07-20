@@ -9,6 +9,7 @@ const state = {
   products: [],
   pending: new Map(), // sku -> reorder qty
   takeQty: new Map(), // sku -> qty about to be taken (local only, defaults to 1)
+  activeCategory: null, // set by tapping a category chip; null means "All"
 };
 
 const els = {
@@ -18,6 +19,7 @@ const els = {
   searchControls: document.getElementById("searchControls"),
   mainContent: document.getElementById("mainContent"),
   search: document.getElementById("search"),
+  categoryChips: document.getElementById("categoryChips"),
   lowStockOnly: document.getElementById("lowStockOnly"),
   status: document.getElementById("status"),
   grid: document.getElementById("productGrid"),
@@ -119,6 +121,7 @@ async function loadProducts() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     state.products = await res.json();
     els.status.textContent = `${state.products.length} products`;
+    renderCategoryChips();
     renderGrid();
   } catch (err) {
     els.status.textContent = "Failed to load products. Check your connection and try again.";
@@ -140,12 +143,51 @@ function isLowStock(product) {
   return current <= min;
 }
 
+function renderCategoryChips() {
+  const categories = Array.from(
+    new Set(state.products.map((p) => (p.category || "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Dropping a category that no longer exists (e.g. renamed in the Sheet)
+  // so the filter doesn't get stuck on a chip that's no longer shown.
+  if (state.activeCategory && !categories.includes(state.activeCategory)) {
+    state.activeCategory = null;
+  }
+
+  els.categoryChips.innerHTML = "";
+
+  if (categories.length === 0) return;
+
+  const allChip = document.createElement("button");
+  allChip.type = "button";
+  allChip.className = "chip" + (state.activeCategory === null ? " active" : "");
+  allChip.textContent = "All";
+  allChip.addEventListener("click", () => selectCategory(null));
+  els.categoryChips.appendChild(allChip);
+
+  for (const category of categories) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (state.activeCategory === category ? " active" : "");
+    chip.textContent = category;
+    chip.addEventListener("click", () => selectCategory(category));
+    els.categoryChips.appendChild(chip);
+  }
+}
+
+function selectCategory(category) {
+  state.activeCategory = category;
+  renderCategoryChips();
+  renderGrid();
+}
+
 function renderGrid() {
   const term = els.search.value.trim().toLowerCase();
   const lowStockOnly = els.lowStockOnly.checked;
   const filtered = state.products
     .filter((p) => matchesSearch(p, term))
-    .filter((p) => !lowStockOnly || isLowStock(p));
+    .filter((p) => !lowStockOnly || isLowStock(p))
+    .filter((p) => !state.activeCategory || p.category === state.activeCategory);
 
   els.grid.innerHTML = "";
   for (const product of filtered) {
