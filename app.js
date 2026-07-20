@@ -13,6 +13,10 @@ const state = {
 
 const els = {
   requester: document.getElementById("requester"),
+  gateHint: document.getElementById("gateHint"),
+  gateContinueBtn: document.getElementById("gateContinueBtn"),
+  searchControls: document.getElementById("searchControls"),
+  mainContent: document.getElementById("mainContent"),
   search: document.getElementById("search"),
   lowStockOnly: document.getElementById("lowStockOnly"),
   status: document.getElementById("status"),
@@ -28,14 +32,27 @@ const els = {
   toast: document.getElementById("toast"),
 };
 
+let gatePassed = false;
+
 init();
 
 function init() {
   const savedName = localStorage.getItem("requesterName");
-  if (savedName) els.requester.value = savedName;
+  if (savedName) {
+    els.requester.value = savedName;
+    passGate();
+  } else {
+    els.gateContinueBtn.classList.remove("hidden");
+    els.requester.focus();
+  }
+
   els.requester.addEventListener("change", () => {
     localStorage.setItem("requesterName", els.requester.value.trim());
   });
+  els.requester.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !gatePassed) confirmGateName();
+  });
+  els.gateContinueBtn.addEventListener("click", confirmGateName);
 
   restorePending();
   updateCartBar();
@@ -56,6 +73,25 @@ function init() {
   });
 
   loadProducts();
+}
+
+function confirmGateName() {
+  const name = els.requester.value.trim();
+  if (!name) {
+    showToast("Please enter your name first.");
+    els.requester.focus();
+    return;
+  }
+  localStorage.setItem("requesterName", name);
+  passGate();
+}
+
+function passGate() {
+  gatePassed = true;
+  els.gateHint.classList.add("hidden");
+  els.gateContinueBtn.classList.add("hidden");
+  els.searchControls.classList.remove("hidden");
+  els.mainContent.classList.remove("hidden");
 }
 
 function restorePending() {

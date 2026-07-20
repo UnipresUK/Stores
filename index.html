@@ -28,18 +28,23 @@
     </datalist>
   </div>
 
-  <div class="field">
-    <label for="search">Search</label>
-    <input id="search" type="search" placeholder="Search by SKU, description, or location (e.g. A1)" autocomplete="off">
-  </div>
+  <p id="gateHint" class="gate-hint">Enter your name above to view the stock list.</p>
+  <button id="gateContinueBtn" type="button" class="continue-btn hidden">Continue</button>
 
-  <label class="checkbox-field">
-    <input id="lowStockOnly" type="checkbox">
-    Low stock only
-  </label>
+  <div id="searchControls" class="search-controls hidden">
+    <div class="field">
+      <label for="search">Search</label>
+      <input id="search" type="search" placeholder="Search by SKU, description, or location (e.g. A1)" autocomplete="off">
+    </div>
+
+    <label class="checkbox-field">
+      <input id="lowStockOnly" type="checkbox">
+      Low stock only
+    </label>
+  </div>
 </header>
 
-<main>
+<main id="mainContent" class="hidden">
   <p id="status" class="status"></p>
   <div id="productGrid" class="product-grid"></div>
 </main>
