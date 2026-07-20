@@ -6,7 +6,7 @@ A QR-code-friendly page for the engineering team to browse stock locations (A1, 
 
 **Use a personal Google account, not a corporate/Workspace one.** Corporate Workspace accounts commonly restrict sharing/publishing outside the organization, which blocks deploying the Apps Script Web App with "Anyone" access (step 2 below). A personal account has no such restriction. Note that email notifications will then show as sent *from* that personal account — the recipient address can still be anything you like (e.g. a work inbox).
 
-Create a new Google Sheet with two tabs:
+Create a new Google Sheet with three tabs:
 
 **`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
@@ -24,6 +24,13 @@ Create a new Google Sheet with two tabs:
 
 | Timestamp | Requester | SKU | Qty Requested |
 |-----------|-----------|-----|-----------------|
+
+**`StockTaken`** (optional but recommended) — an audit log of who took what off the shelf; leave empty except for a header row:
+
+| Timestamp | Requester | SKU | Qty Taken | New Stock |
+|-----------|-----------|-----|-----------|-----------|
+
+This tab is optional — if you skip it, taking stock still works and still updates `Current Stock`, it just won't be logged anywhere.
 
 ## 2. Deploy the Apps Script backend
 
@@ -66,3 +73,11 @@ Save images into the `images/` folder using the filename referenced in the `Imag
 - Submitting sends one batched request: it logs a row per item in `Requests` and sends a single summary email, rather than emailing on every button tap.
 - Flagged quantities are saved to the device's local storage as you go, so closing the tab or reloading the page won't lose them — and the browser will warn before letting anyone navigate away or close the tab while something is still unsubmitted.
 - Each device/browser is independent (name, search, and pending quantities aren't shared between devices), so multiple people can use the page from their own phones at the same time without conflicting. Submissions from different devices at the same moment are queued safely on the backend so none get lost.
+
+## How taking stock works
+
+Separate from reordering, each product also has a **Take stock** control so `Current Stock` reflects what's actually on the shelf without anyone having to walk around and count:
+
+- Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, no email — since this happens far more often than reordering and isn't worth the extra friction.
+- `Current Stock` is updated straight away (never going below 0), which means the "Low stock" badge and filter stay accurate automatically instead of relying on a manual stock check.
+- If `StockTaken` exists, every take is logged with who, what, how much, and the resulting stock level, for traceability.

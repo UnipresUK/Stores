@@ -205,6 +205,48 @@ body {
   font-size: 1.05rem;
 }
 
+.stepper-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.take-stock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.take-stock-row .stepper-label {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.take-stock-row .stepper {
+  margin-top: 0;
+}
+
+.take-btn {
+  border: none;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.take-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .product-card.flagged {
   border-color: var(--accent);
 }

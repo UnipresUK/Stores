@@ -6,6 +6,7 @@
 var NOTIFY_EMAIL = "sam.pascoe@upuk-unipres.com";
 var PRODUCTS_SHEET = "Products";
 var REQUESTS_SHEET = "Requests";
+var STOCK_LOG_SHEET = "StockTaken";
 
 function doGet(e) {
   var products = readProducts();
@@ -13,6 +14,7 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  var action = (e.parameter && e.parameter.action) || "reorder";
   var body;
   try {
     body = JSON.parse(e.postData.contents);
@@ -20,6 +22,13 @@ function doPost(e) {
     return jsonResponse({ ok: false, error: "Invalid JSON body" });
   }
 
+  if (action === "take") {
+    return handleTakeStock(body);
+  }
+  return handleReorder(body);
+}
+
+function handleReorder(body) {
   var requester = (body.requester || "").toString().trim();
   var items = Array.isArray(body.items) ? body.items : [];
 
@@ -41,6 +50,34 @@ function doPost(e) {
   sendNotificationEmail(requester, items);
 
   return jsonResponse({ ok: true });
+}
+
+function handleTakeStock(body) {
+  var requester = (body.requester || "").toString().trim();
+  var sku = (body.sku || "").toString().trim();
+  var qty = Number(body.qty);
+
+  if (!requester || !sku || !qty || qty <= 0) {
+    return jsonResponse({ ok: false, error: "requester, sku, and a positive qty are required" });
+  }
+
+  // Deducting stock happens far more often than reordering and doesn't
+  // need an email each time, but it still needs the same lock protection:
+  // two people taking the same part at once must not overwrite each other.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var newStock;
+  try {
+    newStock = deductStock(sku, qty);
+  } catch (err) {
+    return jsonResponse({ ok: false, error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+
+  appendStockLog(requester, sku, qty, newStock);
+
+  return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
 }
 
 function readProducts() {
@@ -90,6 +127,35 @@ function appendRequests(requester, items) {
     return [timestamp, requester, item.sku, item.qty];
   });
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+}
+
+function deductStock(sku, qty) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PRODUCTS_SHEET);
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function (h) { return h.toString().trim().toLowerCase(); });
+  var skuCol = headers.indexOf("sku");
+  var stockCol = headers.indexOf("current stock");
+
+  if (skuCol < 0 || stockCol < 0) {
+    throw new Error("Products sheet is missing an SKU or Current Stock column");
+  }
+
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][skuCol].toString() === sku) {
+      var current = Number(values[i][stockCol]) || 0;
+      var updated = Math.max(0, current - qty);
+      sheet.getRange(i + 1, stockCol + 1).setValue(updated);
+      return updated;
+    }
+  }
+
+  throw new Error("SKU not found: " + sku);
+}
+
+function appendStockLog(requester, sku, qty, newStock) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_LOG_SHEET);
+  if (!sheet) return; // optional tab -- skip logging if it hasn't been created
+  sheet.appendRow([new Date(), requester, sku, qty, newStock]);
 }
 
 function sendNotificationEmail(requester, items) {

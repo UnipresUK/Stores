@@ -7,7 +7,8 @@ const PENDING_STORAGE_KEY = "pendingOrders";
 
 const state = {
   products: [],
-  pending: new Map(), // sku -> qty
+  pending: new Map(), // sku -> reorder qty
+  takeQty: new Map(), // sku -> qty about to be taken (local only, defaults to 1)
 };
 
 const els = {
@@ -177,9 +178,55 @@ function renderCard(product) {
   plusBtn.addEventListener("click", () => changeQty(product.sku, 1));
 
   stepper.append(minusBtn, qtyEl, plusBtn);
+
+  const stepperLabel = document.createElement("div");
+  stepperLabel.className = "stepper-label";
+  stepperLabel.textContent = "Reorder qty";
+  card.appendChild(stepperLabel);
   card.appendChild(stepper);
 
+  card.appendChild(renderTakeStockRow(product));
+
   return card;
+}
+
+function renderTakeStockRow(product) {
+  const takeQty = state.takeQty.get(product.sku) || 1;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "take-stock-row";
+
+  const label = document.createElement("div");
+  label.className = "stepper-label";
+  label.textContent = "Take stock";
+  wrapper.appendChild(label);
+
+  const stepper = document.createElement("div");
+  stepper.className = "stepper";
+
+  const minusBtn = document.createElement("button");
+  minusBtn.type = "button";
+  minusBtn.textContent = "−";
+  minusBtn.addEventListener("click", () => changeTakeQty(product.sku, -1));
+
+  const qtyEl = document.createElement("span");
+  qtyEl.className = "qty";
+  qtyEl.textContent = takeQty;
+
+  const plusBtn = document.createElement("button");
+  plusBtn.type = "button";
+  plusBtn.textContent = "+";
+  plusBtn.addEventListener("click", () => changeTakeQty(product.sku, 1));
+
+  const takeBtn = document.createElement("button");
+  takeBtn.type = "button";
+  takeBtn.className = "take-btn";
+  takeBtn.textContent = "Take";
+  takeBtn.addEventListener("click", () => takeStock(product.sku, takeBtn));
+
+  stepper.append(minusBtn, qtyEl, plusBtn);
+  wrapper.append(stepper, takeBtn);
+  return wrapper;
 }
 
 function changeQty(sku, delta) {
@@ -193,6 +240,55 @@ function changeQty(sku, delta) {
   savePending();
   renderGrid();
   updateCartBar();
+}
+
+function changeTakeQty(sku, delta) {
+  const current = state.takeQty.get(sku) || 1;
+  const next = Math.max(1, current + delta);
+  state.takeQty.set(sku, next);
+  renderGrid();
+}
+
+async function takeStock(sku, buttonEl) {
+  const requester = els.requester.value.trim();
+  if (!requester) {
+    showToast("Please enter your name first.");
+    els.requester.focus();
+    return;
+  }
+
+  const qty = state.takeQty.get(sku) || 1;
+  buttonEl.disabled = true;
+
+  try {
+    if (API_URL) {
+      const res = await fetch(`${API_URL}?action=take`, {
+        method: "POST",
+        body: JSON.stringify({ requester, sku, qty }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Unknown error");
+
+      const product = state.products.find((p) => p.sku === sku);
+      if (product) product.currentStock = data.currentStock;
+    } else {
+      console.log("Simulated take (no API_URL set):", { requester, sku, qty });
+      await new Promise((r) => setTimeout(r, 300));
+      const product = state.products.find((p) => p.sku === sku);
+      if (product) {
+        product.currentStock = Math.max(0, Number(product.currentStock) - qty);
+      }
+    }
+
+    state.takeQty.delete(sku);
+    renderGrid();
+    showToast(`Took ${qty} of ${sku}.`);
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to record stock taken. Please try again.");
+    buttonEl.disabled = false;
+  }
 }
 
 function updateCartBar() {
