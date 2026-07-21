@@ -161,15 +161,17 @@ body {
   background: var(--bg);
 }
 
-.product-info .sku {
+.product-info .desc {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 2px 0 4px;
 }
 
-.product-info .desc {
+.product-info .sku {
   color: var(--muted);
-  font-size: 0.85rem;
-  margin: 2px 0 6px;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
 }
 
 .location-badge {

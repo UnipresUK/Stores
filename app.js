@@ -230,8 +230,8 @@ function renderCard(product) {
     <span class="location-badge">${escapeHtml(product.location)}</span>
     ${product.category ? `<span class="category-badge">${escapeHtml(product.category)}</span>` : ""}
     ${isLowStock(product) ? '<span class="low-stock-badge">Low stock</span>' : ""}
-    <div class="sku">${escapeHtml(product.sku)}</div>
     <div class="desc">${escapeHtml(product.description)}</div>
+    <div class="sku">${escapeHtml(product.sku)}</div>
     ${oemLine}
     ${supplierLine}
     <div class="stock-line">In stock: ${escapeHtml(String(product.currentStock))}${escapeHtml(unitSuffix)}</div>
