@@ -63,7 +63,10 @@ Point any QR code generator at the Pages URL above and print it for the stores a
 
 ## Adding product photos
 
-Save images into the `images/` folder using the filename referenced in the `Image Filename` column (e.g. `images/sku-1001.jpg`). Keep them small — around 400×400px and under 150KB — so the page stays fast on phones.
+Two ways to fill in `Image Filename`:
+
+- **Upload to the repo (recommended for anything you want fast and reliable):** save the file into the `images/` folder and put its filename in the column (e.g. `sku-1001.jpg`). Keep it small — around 400×400px and under 150KB — so the page stays fast on phones. Uploading through GitHub's web UI (`images` folder → **Add file → Upload files**) works fine, no git needed.
+- **Paste a direct image URL** (e.g. copied from a supplier's site): put the full `https://...` link in the column instead of a filename — the page detects it and loads it directly. Quicker to set up, but depends on that site keeping the image at that address, and you don't control its size/optimization. Note this must be a link to the image file itself (usually ending in `.jpg`/`.png`), not a product page — right-click the photo on the supplier's site and choose "Copy image address" to get the real link.
 
 ## How the reorder flow works
 

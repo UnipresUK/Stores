@@ -208,7 +208,7 @@ function renderCard(product) {
   card.className = "product-card" + (qty > 0 ? " flagged" : "");
 
   const img = document.createElement("img");
-  img.src = product.imageFilename ? `images/${product.imageFilename}` : "images/placeholder.svg";
+  img.src = resolveImageSrc(product.imageFilename);
   img.alt = product.description || product.sku;
   img.loading = "lazy";
   img.onerror = () => { img.onerror = null; img.src = "images/placeholder.svg"; };
@@ -445,6 +445,13 @@ function showToast(message) {
   els.toast.classList.remove("hidden");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => els.toast.classList.add("hidden"), 2500);
+}
+
+function resolveImageSrc(imageFilename) {
+  if (!imageFilename) return "images/placeholder.svg";
+  // A full URL (e.g. pasted from a supplier's site) is used directly;
+  // anything else is treated as a filename uploaded to the images/ folder.
+  return /^https?:\/\//i.test(imageFilename) ? imageFilename : `images/${imageFilename}`;
 }
 
 function escapeHtml(str) {
