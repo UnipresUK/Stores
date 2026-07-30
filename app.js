@@ -5,6 +5,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH
 
 const PENDING_STORAGE_KEY = "pendingOrders";
 const SHOW_REMOVALS_KEY = "showRemovals";
+const HIDE_IMAGES_KEY = "hideImages";
 
 const state = {
   products: [],
@@ -22,6 +23,7 @@ const els = {
   search: document.getElementById("search"),
   categoryChips: document.getElementById("categoryChips"),
   lowStockOnly: document.getElementById("lowStockOnly"),
+  hideImages: document.getElementById("hideImages"),
   status: document.getElementById("status"),
   grid: document.getElementById("productGrid"),
   cartBar: document.getElementById("cartBar"),
@@ -70,6 +72,13 @@ function init() {
 
   els.search.addEventListener("input", () => renderGrid());
   els.lowStockOnly.addEventListener("change", () => renderGrid());
+
+  els.hideImages.checked = localStorage.getItem(HIDE_IMAGES_KEY) === "true";
+  els.grid.classList.toggle("hide-images", els.hideImages.checked);
+  els.hideImages.addEventListener("change", () => {
+    localStorage.setItem(HIDE_IMAGES_KEY, els.hideImages.checked);
+    els.grid.classList.toggle("hide-images", els.hideImages.checked);
+  });
   els.cartSubmitBtn.addEventListener("click", openConfirm);
   els.confirmCancelBtn.addEventListener("click", closeConfirm);
   els.confirmSubmitBtn.addEventListener("click", submitOrder);
@@ -290,12 +299,12 @@ function renderCard(product) {
   const supplierLine = product.supplier || product.supplierLink
     ? `<div class="meta-line">Supplier: ${
         product.supplierLink
-          ? `<a href="${escapeAttr(product.supplierLink)}" target="_blank" rel="noopener">${escapeHtml(product.supplier || "Link")}</a>`
+          ? `<a href="${escapeAttr(normalizeUrl(product.supplierLink))}" target="_blank" rel="noopener">${escapeHtml(product.supplier || "Link")}</a>`
           : escapeHtml(product.supplier)
       }</div>`
     : "";
   const datasheetLine = product.datasheetLink
-    ? `<div class="meta-line"><a href="${escapeAttr(product.datasheetLink)}" target="_blank" rel="noopener">View datasheet</a></div>`
+    ? `<div class="meta-line"><a href="${escapeAttr(normalizeUrl(product.datasheetLink))}" target="_blank" rel="noopener">View datasheet</a></div>`
     : "";
 
   const info = document.createElement("div");
@@ -532,6 +541,12 @@ function resolveImageSrc(imageFilename) {
   // A full URL (e.g. pasted from a supplier's site) is used directly;
   // anything else is treated as a filename uploaded to the images/ folder.
   return /^https?:\/\//i.test(imageFilename) ? imageFilename : `images/${imageFilename}`;
+}
+
+function normalizeUrl(url) {
+  // Sheet data often gets pasted without a protocol (e.g. "www.example.com/x.pdf"),
+  // which the browser would otherwise treat as a broken relative link.
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
 function escapeHtml(str) {

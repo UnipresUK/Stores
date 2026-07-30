@@ -102,6 +102,12 @@ body {
   height: 16px;
 }
 
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 .gate-hint {
   margin: 0;
   font-size: 0.85rem;
@@ -215,6 +221,10 @@ body {
   object-fit: cover;
   border-radius: 8px;
   background: var(--bg);
+}
+
+.product-grid.hide-images .product-card img {
+  display: none;
 }
 
 .product-info .desc {
