@@ -82,9 +82,10 @@ Two ways to fill in `Image Filename`:
 
 Separate from reordering, each product also has a **Take stock** control so `Current Stock` reflects what's actually on the shelf without anyone having to walk around and count:
 
-- Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, no email — since this happens far more often than reordering and isn't worth the extra friction.
+- Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, since this happens far more often than reordering and isn't worth the extra friction of a confirm screen.
 - `Current Stock` is updated straight away (never going below 0), which means the "Low stock" badge and filter stay accurate automatically instead of relying on a manual stock check.
 - If `StockTaken` exists, every take is logged with who, what, how much, and the resulting stock level, for traceability.
+- An email is sent to `NOTIFY_EMAIL` for every single take (not batched), so you'll get one email per Take action. If usage picks up and this becomes too much volume, this is easy to change to a periodic digest instead — just ask.
 
 ## Settings and the recent removals log
 

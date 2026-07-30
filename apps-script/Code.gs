@@ -79,6 +79,7 @@ function handleTakeStock(body) {
   }
 
   appendStockLog(requester, sku, qty, newStock);
+  sendTakeNotificationEmail(requester, sku, qty, newStock);
 
   return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
 }
@@ -206,6 +207,16 @@ function sendNotificationEmail(requester, items) {
     requester + " submitted a reorder request:\n\n" +
     lines.join("\n") +
     "\n\nSubmitted: " + new Date().toLocaleString();
+
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
+}
+
+function sendTakeNotificationEmail(requester, sku, qty, newStock) {
+  var subject = requester + " took stock: " + sku;
+  var body =
+    requester + " took " + qty + " of " + sku + ".\n\n" +
+    "New stock level: " + newStock +
+    "\n\nTaken: " + new Date().toLocaleString();
 
   MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
 }
