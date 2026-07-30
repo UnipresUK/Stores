@@ -429,6 +429,12 @@ body {
   margin-top: 0;
 }
 
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
 .confirm-list {
   list-style: none;
   padding: 0;

@@ -90,6 +90,25 @@
       Show recent stock removals
     </label>
     <p class="gate-hint">See every Take Stock action as it happens, so you can keep an eye on things while this is new.</p>
+
+    <hr class="settings-divider">
+
+    <div id="settingsLocked">
+      <p class="gate-hint">Enter the passcode to view/change email notification settings.</p>
+      <div class="field">
+        <input id="settingsPasscodeInput" type="password" placeholder="Passcode" autocomplete="off">
+      </div>
+      <button id="settingsUnlockBtn" type="button" class="continue-btn">Unlock</button>
+    </div>
+
+    <div id="settingsUnlocked" class="hidden">
+      <label class="checkbox-field">
+        <input id="takeEmailToggle" type="checkbox">
+        Email me on every stock take
+      </label>
+      <p class="gate-hint">Real-time visibility while this is new -- easy to switch to a daily digest later if volume gets high.</p>
+    </div>
+
     <div class="confirm-actions">
       <button id="settingsCloseBtn" type="button">Close</button>
     </div>

@@ -7,11 +7,19 @@ var NOTIFY_EMAIL = "sam.pascoe@upuk-unipres.com";
 var PRODUCTS_SHEET = "Products";
 var REQUESTS_SHEET = "Requests";
 var STOCK_LOG_SHEET = "StockTaken";
+var TAKE_EMAIL_PROPERTY = "takeEmailEnabled";
+var SETTINGS_PASSCODE = "1234"; // change this to whatever you like
 
 function doGet(e) {
   var action = (e.parameter && e.parameter.action) || "products";
   if (action === "transactions") {
     return jsonResponse(readRecentTransactions());
+  }
+  if (action === "settings") {
+    if ((e.parameter.passcode || "") !== SETTINGS_PASSCODE) {
+      return jsonResponse({ ok: false, error: "Invalid passcode" });
+    }
+    return jsonResponse({ ok: true, takeEmailEnabled: isTakeEmailEnabled() });
   }
   return jsonResponse(readProducts());
 }
@@ -28,7 +36,30 @@ function doPost(e) {
   if (action === "take") {
     return handleTakeStock(body);
   }
+  if (action === "updateSettings") {
+    return handleUpdateSettings(body);
+  }
   return handleReorder(body);
+}
+
+function handleUpdateSettings(body) {
+  if ((body.passcode || "") !== SETTINGS_PASSCODE) {
+    return jsonResponse({ ok: false, error: "Invalid passcode" });
+  }
+  setTakeEmailEnabled(!!body.takeEmailEnabled);
+  return jsonResponse({ ok: true, takeEmailEnabled: isTakeEmailEnabled() });
+}
+
+function isTakeEmailEnabled() {
+  // Defaults to ON (unset) so every removal is emailed while adoption is
+  // still being checked; this is a shared setting for everyone, not a
+  // per-device preference, since it controls whether *you* get emailed.
+  var stored = PropertiesService.getScriptProperties().getProperty(TAKE_EMAIL_PROPERTY);
+  return stored === null ? true : stored === "true";
+}
+
+function setTakeEmailEnabled(enabled) {
+  PropertiesService.getScriptProperties().setProperty(TAKE_EMAIL_PROPERTY, String(enabled));
 }
 
 function handleReorder(body) {
@@ -79,7 +110,9 @@ function handleTakeStock(body) {
   }
 
   appendStockLog(requester, sku, qty, newStock);
-  sendTakeNotificationEmail(requester, sku, qty, newStock);
+  if (isTakeEmailEnabled()) {
+    sendTakeNotificationEmail(requester, sku, qty, newStock);
+  }
 
   return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
 }

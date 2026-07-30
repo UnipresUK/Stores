@@ -38,6 +38,11 @@ const els = {
   settingsOverlay: document.getElementById("settingsOverlay"),
   showRemovalsToggle: document.getElementById("showRemovalsToggle"),
   settingsCloseBtn: document.getElementById("settingsCloseBtn"),
+  settingsLocked: document.getElementById("settingsLocked"),
+  settingsUnlocked: document.getElementById("settingsUnlocked"),
+  settingsPasscodeInput: document.getElementById("settingsPasscodeInput"),
+  settingsUnlockBtn: document.getElementById("settingsUnlockBtn"),
+  takeEmailToggle: document.getElementById("takeEmailToggle"),
   removalsPanel: document.getElementById("removalsPanel"),
   removalsList: document.getElementById("removalsList"),
   toast: document.getElementById("toast"),
@@ -137,6 +142,66 @@ function initSettings() {
     els.removalsPanel.classList.toggle("hidden", !checked);
     if (checked) loadTransactions();
   });
+
+  els.settingsUnlockBtn.addEventListener("click", unlockSettings);
+  els.settingsPasscodeInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") unlockSettings();
+  });
+  els.takeEmailToggle.addEventListener("change", updateTakeEmailSetting);
+}
+
+let settingsPasscode = null;
+
+async function unlockSettings() {
+  const passcode = els.settingsPasscodeInput.value.trim();
+  if (!passcode) {
+    showToast("Enter the passcode first.");
+    return;
+  }
+  if (!API_URL) {
+    showToast("Not available in demo mode (no API_URL set).");
+    return;
+  }
+
+  els.settingsUnlockBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_URL}?action=settings&passcode=${encodeURIComponent(passcode)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.ok) {
+      showToast("Incorrect passcode.");
+      return;
+    }
+
+    settingsPasscode = passcode;
+    els.takeEmailToggle.checked = data.takeEmailEnabled;
+    els.settingsLocked.classList.add("hidden");
+    els.settingsUnlocked.classList.remove("hidden");
+    els.settingsPasscodeInput.value = "";
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to check passcode. Please try again.");
+  } finally {
+    els.settingsUnlockBtn.disabled = false;
+  }
+}
+
+async function updateTakeEmailSetting() {
+  const checked = els.takeEmailToggle.checked;
+  try {
+    const res = await fetch(`${API_URL}?action=updateSettings`, {
+      method: "POST",
+      body: JSON.stringify({ passcode: settingsPasscode, takeEmailEnabled: checked }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Unknown error");
+    showToast(checked ? "Take Stock emails turned on." : "Take Stock emails turned off.");
+  } catch (err) {
+    console.error(err);
+    els.takeEmailToggle.checked = !checked; // revert on failure
+    showToast("Failed to update setting. Please try again.");
+  }
 }
 
 async function loadTransactions() {

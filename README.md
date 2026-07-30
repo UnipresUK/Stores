@@ -37,7 +37,7 @@ This tab is optional — if you skip it, taking stock still works and still upda
 
 1. In the Sheet, go to **Extensions > Apps Script**.
 2. Delete the default code and paste in the contents of [`apps-script/Code.gs`](apps-script/Code.gs).
-3. Update `NOTIFY_EMAIL` at the top if needed (currently `sam.pascoe@upuk-unipres.com`).
+3. Update `NOTIFY_EMAIL` at the top if needed (currently `sam.pascoe@upuk-unipres.com`), and change `SETTINGS_PASSCODE` (currently `1234`) to something only you know — it gates the Settings panel's email toggle.
 4. Click **Deploy > New deployment**.
    - Type: **Web app**
    - Execute as: **Me**
@@ -85,10 +85,11 @@ Separate from reordering, each product also has a **Take stock** control so `Cur
 - Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, since this happens far more often than reordering and isn't worth the extra friction of a confirm screen.
 - `Current Stock` is updated straight away (never going below 0), which means the "Low stock" badge and filter stay accurate automatically instead of relying on a manual stock check.
 - If `StockTaken` exists, every take is logged with who, what, how much, and the resulting stock level, for traceability.
-- An email is sent to `NOTIFY_EMAIL` for every single take (not batched), so you'll get one email per Take action. If usage picks up and this becomes too much volume, this is easy to change to a periodic digest instead — just ask.
+- An email is sent to `NOTIFY_EMAIL` for every single take (not batched), so you'll get one email per Take action, controlled by the Settings toggle below. If usage picks up and this becomes too much volume, this is easy to change to a periodic digest instead — just ask.
 
 ## Settings and the recent removals log
 
-The gear icon (top right) opens a small **Settings** panel with a single toggle: **"Show recent stock removals"**. It defaults to **on** the first time anyone opens the page on a given device, so you can watch every Take Stock action as it happens while the system is new — turn it off later per-device if you no longer need it.
+The gear icon (top right) opens a small **Settings** panel with two things:
 
-When on, a panel above the product list shows the most recent 50 entries from `StockTaken` (who, what, how much, resulting stock), newest first, and refreshes automatically right after anyone takes stock. Requires the `StockTaken` tab to exist — without it, the panel just says there's nothing to show.
+- **"Show recent stock removals"** — no passcode needed, since it only affects what that device displays. Defaults to **on** the first time anyone opens the page on a given device, so you can watch every Take Stock action as it happens while the system is new. When on, a panel above the product list shows the most recent 50 entries from `StockTaken` (who, what, how much, resulting stock), newest first, refreshing automatically right after anyone takes stock. Requires the `StockTaken` tab to exist — without it, the panel just says there's nothing to show.
+- **"Email me on every stock take"** — behind the `SETTINGS_PASSCODE` you set in `Code.gs`, since this controls whether *you* get emailed and shouldn't be something anyone with the link can switch off. Enter the passcode once per visit to unlock it; the actual check happens on the backend, so it can't be bypassed by hiding the button client-side.
