@@ -276,7 +276,7 @@ async function loadProducts() {
 
 function matchesSearch(product, term) {
   if (!term) return true;
-  const haystack = `${product.sku} ${product.description} ${product.location} ${product.category || ""} ${product.oem || ""} ${product.supplier || ""}`.toLowerCase();
+  const haystack = `${product.sku} ${product.description} ${product.location} ${product.category || ""} ${product.oem || ""} ${product.partNumber || ""} ${product.supplier || ""}`.toLowerCase();
   return haystack.includes(term);
 }
 
@@ -360,7 +360,8 @@ function renderCard(product) {
   card.appendChild(img);
 
   const unitSuffix = product.unit ? ` ${product.unit}` : "";
-  const oemLine = product.oem ? `<div class="meta-line">Part No: ${escapeHtml(product.oem)}</div>` : "";
+  const partNo = product.partNumber || product.oem;
+  const oemLine = partNo ? `<div class="meta-line">Part No: ${escapeHtml(partNo)}</div>` : "";
   const supplierLine = product.supplier || product.supplierLink
     ? `<div class="meta-line">Supplier: ${
         product.supplierLink

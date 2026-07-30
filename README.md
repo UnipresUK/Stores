@@ -10,13 +10,13 @@ Create a new Google Sheet with three tabs:
 
 **`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
-| SKU | Description | Category | OEM | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Unit | Image Filename |
-|-----|-------------|----------|-----|----------|----------------|-----------------|----------|----------------|-----------|------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
+| SKU | Description | Category | OEM | Part Number | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Unit | Image Filename |
+|-----|-------------|----------|-----|-------------|----------|----------------|-----------------|----------|----------------|-----------|------|-----------------|
+| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
 
 - Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
 - Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
-- `Category`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). `OEM` is shown on the card as **"Part No:"** — it's the manufacturer/part number field.
+- `Category`, `Part Number`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). The card shows **"Part No:"** using whichever of `Part Number` / `OEM` is filled in (`Part Number` wins if both are).
 - `Supplier Link` (optional) renders as a clickable link on the product card so whoever's ordering can jump straight to the supplier's page.
 - `Datasheet Link` (optional) renders as a separate "View datasheet" link, for a technical spec sheet/PDF distinct from the supplier's purchase page.
 - `Unit` (optional, e.g. "each", "box of 100") is shown next to the stock count so there's no ambiguity about what a "+1" reorder actually represents.
