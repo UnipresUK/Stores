@@ -9,7 +9,10 @@
 <body>
 
 <header class="topbar">
-  <h1>Stores Management</h1>
+  <div class="topbar-heading">
+    <h1>Stores Management</h1>
+    <button id="settingsBtn" type="button" class="settings-btn" aria-label="Settings">&#9881;</button>
+  </div>
 
   <div class="field">
     <label for="requester">Your name</label>
@@ -47,6 +50,10 @@
 </header>
 
 <main id="mainContent" class="hidden">
+  <div id="removalsPanel" class="removals-panel hidden">
+    <h2>Recent removals</h2>
+    <div id="removalsList" class="removals-list"></div>
+  </div>
   <p id="status" class="status"></p>
   <div id="productGrid" class="product-grid"></div>
 </main>
@@ -64,6 +71,20 @@
     <div class="confirm-actions">
       <button id="confirmCancelBtn" type="button" class="secondary">Cancel</button>
       <button id="confirmSubmitBtn" type="button">Confirm &amp; Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsOverlay" class="overlay hidden">
+  <div class="confirm-card">
+    <h2>Settings</h2>
+    <label class="checkbox-field">
+      <input id="showRemovalsToggle" type="checkbox">
+      Show recent stock removals
+    </label>
+    <p class="gate-hint">See every Take Stock action as it happens, so you can keep an eye on things while this is new.</p>
+    <div class="confirm-actions">
+      <button id="settingsCloseBtn" type="button">Close</button>
     </div>
   </div>
 </div>

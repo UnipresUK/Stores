@@ -45,8 +45,27 @@ body {
 }
 
 .topbar h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 1.15rem;
+}
+
+.topbar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.settings-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .field {
@@ -136,9 +155,46 @@ body {
   font-size: 0.9rem;
 }
 
+.removals-panel {
+  margin: 12px 16px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  padding: 12px;
+}
+
+.removals-panel h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.removals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.removal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.removal-row .removal-who,
+.removal-row .removal-what {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
   padding: 12px 16px;
 }
@@ -264,19 +320,27 @@ body {
 
 .take-stock-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
 }
 
 .take-stock-row .stepper-label {
   margin-top: 0;
-  flex-shrink: 0;
 }
 
-.take-stock-row .stepper {
+.take-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.take-controls-row .stepper {
   margin-top: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .take-btn {

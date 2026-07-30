@@ -4,6 +4,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH56EVZ9tPDP7A5jg3B9GcCOu1GnDsVwL2MXWDaCJqxltXQQ/exec";
 
 const PENDING_STORAGE_KEY = "pendingOrders";
+const SHOW_REMOVALS_KEY = "showRemovals";
 
 const state = {
   products: [],
@@ -31,6 +32,12 @@ const els = {
   confirmList: document.getElementById("confirmList"),
   confirmCancelBtn: document.getElementById("confirmCancelBtn"),
   confirmSubmitBtn: document.getElementById("confirmSubmitBtn"),
+  settingsBtn: document.getElementById("settingsBtn"),
+  settingsOverlay: document.getElementById("settingsOverlay"),
+  showRemovalsToggle: document.getElementById("showRemovalsToggle"),
+  settingsCloseBtn: document.getElementById("settingsCloseBtn"),
+  removalsPanel: document.getElementById("removalsPanel"),
+  removalsList: document.getElementById("removalsList"),
   toast: document.getElementById("toast"),
 };
 
@@ -55,6 +62,8 @@ function init() {
     if (e.key === "Enter" && !gatePassed) confirmGateName();
   });
   els.gateContinueBtn.addEventListener("click", confirmGateName);
+
+  initSettings();
 
   restorePending();
   updateCartBar();
@@ -94,6 +103,68 @@ function passGate() {
   els.gateContinueBtn.classList.add("hidden");
   els.searchControls.classList.remove("hidden");
   els.mainContent.classList.remove("hidden");
+}
+
+function initSettings() {
+  // Defaults to ON the first time (no stored preference yet), since the
+  // point of this is to watch every removal closely while the system is new.
+  const stored = localStorage.getItem(SHOW_REMOVALS_KEY);
+  const showRemovals = stored === null ? true : stored === "true";
+  els.showRemovalsToggle.checked = showRemovals;
+  if (showRemovals) {
+    els.removalsPanel.classList.remove("hidden");
+    loadTransactions();
+  }
+
+  els.settingsBtn.addEventListener("click", () => {
+    els.settingsOverlay.classList.remove("hidden");
+  });
+  els.settingsCloseBtn.addEventListener("click", () => {
+    els.settingsOverlay.classList.add("hidden");
+  });
+  els.showRemovalsToggle.addEventListener("change", () => {
+    const checked = els.showRemovalsToggle.checked;
+    localStorage.setItem(SHOW_REMOVALS_KEY, checked);
+    els.removalsPanel.classList.toggle("hidden", !checked);
+    if (checked) loadTransactions();
+  });
+}
+
+async function loadTransactions() {
+  els.removalsList.textContent = "Loading…";
+  try {
+    if (!API_URL) {
+      els.removalsList.textContent = "Not available in demo mode (no API_URL set).";
+      return;
+    }
+    const res = await fetch(`${API_URL}?action=transactions`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderTransactions(await res.json());
+  } catch (err) {
+    console.error(err);
+    els.removalsList.textContent = "Failed to load recent removals.";
+  }
+}
+
+function renderTransactions(transactions) {
+  if (!transactions || transactions.length === 0) {
+    els.removalsList.textContent = "No removals recorded yet.";
+    return;
+  }
+  els.removalsList.innerHTML = transactions.map((t) => `
+    <div class="removal-row">
+      <span class="removal-when">${escapeHtml(formatTimestamp(t.timestamp))}</span>
+      <span class="removal-who">${escapeHtml(t.requester)}</span>
+      <span class="removal-what">${escapeHtml(t.sku)} &minus;${escapeHtml(String(t.qty))}</span>
+      <span class="removal-stock">now ${escapeHtml(String(t.newStock))}</span>
+    </div>
+  `).join("");
+}
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
 }
 
 function restorePending() {
@@ -215,13 +286,16 @@ function renderCard(product) {
   card.appendChild(img);
 
   const unitSuffix = product.unit ? ` ${product.unit}` : "";
-  const oemLine = product.oem ? `<div class="meta-line">OEM: ${escapeHtml(product.oem)}</div>` : "";
+  const oemLine = product.oem ? `<div class="meta-line">Part No: ${escapeHtml(product.oem)}</div>` : "";
   const supplierLine = product.supplier || product.supplierLink
     ? `<div class="meta-line">Supplier: ${
         product.supplierLink
           ? `<a href="${escapeAttr(product.supplierLink)}" target="_blank" rel="noopener">${escapeHtml(product.supplier || "Link")}</a>`
           : escapeHtml(product.supplier)
       }</div>`
+    : "";
+  const datasheetLine = product.datasheetLink
+    ? `<div class="meta-line"><a href="${escapeAttr(product.datasheetLink)}" target="_blank" rel="noopener">View datasheet</a></div>`
     : "";
 
   const info = document.createElement("div");
@@ -234,6 +308,7 @@ function renderCard(product) {
     <div class="sku">${escapeHtml(product.sku)}</div>
     ${oemLine}
     ${supplierLine}
+    ${datasheetLine}
     <div class="stock-line">In stock: ${escapeHtml(String(product.currentStock))}${escapeHtml(unitSuffix)}</div>
   `;
   card.appendChild(info);
@@ -279,6 +354,9 @@ function renderTakeStockRow(product) {
   label.textContent = "Take stock";
   wrapper.appendChild(label);
 
+  const controlsRow = document.createElement("div");
+  controlsRow.className = "take-controls-row";
+
   const stepper = document.createElement("div");
   stepper.className = "stepper";
 
@@ -303,7 +381,8 @@ function renderTakeStockRow(product) {
   takeBtn.addEventListener("click", () => takeStock(product.sku, takeBtn));
 
   stepper.append(minusBtn, qtyEl, plusBtn);
-  wrapper.append(stepper, takeBtn);
+  controlsRow.append(stepper, takeBtn);
+  wrapper.appendChild(controlsRow);
   return wrapper;
 }
 
@@ -362,6 +441,7 @@ async function takeStock(sku, buttonEl) {
     state.takeQty.delete(sku);
     renderGrid();
     showToast(`Took ${qty} of ${sku}.`);
+    if (!els.removalsPanel.classList.contains("hidden")) loadTransactions();
   } catch (err) {
     console.error(err);
     showToast("Failed to record stock taken. Please try again.");

@@ -10,14 +10,15 @@ Create a new Google Sheet with three tabs:
 
 **`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
-| SKU | Description | Category | OEM | Supplier | Supplier Link | Location | Current Stock | Min Level | Unit | Image Filename |
-|-----|-------------|----------|-----|----------|----------------|----------|----------------|-----------|------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | ISO 4017 | RS Online | https://... | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
+| SKU | Description | Category | OEM | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Unit | Image Filename |
+|-----|-------------|----------|-----|----------|----------------|-----------------|----------|----------------|-----------|------|-----------------|
+| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
 
 - Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
 - Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
-- `Category`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches).
+- `Category`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). `OEM` is shown on the card as **"Part No:"** — it's the manufacturer/part number field.
 - `Supplier Link` (optional) renders as a clickable link on the product card so whoever's ordering can jump straight to the supplier's page.
+- `Datasheet Link` (optional) renders as a separate "View datasheet" link, for a technical spec sheet/PDF distinct from the supplier's purchase page.
 - `Unit` (optional, e.g. "each", "box of 100") is shown next to the stock count so there's no ambiguity about what a "+1" reorder actually represents.
 
 **`Requests`** — leave empty except for a header row, Apps Script appends to it:
@@ -84,3 +85,9 @@ Separate from reordering, each product also has a **Take stock** control so `Cur
 - Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, no email — since this happens far more often than reordering and isn't worth the extra friction.
 - `Current Stock` is updated straight away (never going below 0), which means the "Low stock" badge and filter stay accurate automatically instead of relying on a manual stock check.
 - If `StockTaken` exists, every take is logged with who, what, how much, and the resulting stock level, for traceability.
+
+## Settings and the recent removals log
+
+The gear icon (top right) opens a small **Settings** panel with a single toggle: **"Show recent stock removals"**. It defaults to **on** the first time anyone opens the page on a given device, so you can watch every Take Stock action as it happens while the system is new — turn it off later per-device if you no longer need it.
+
+When on, a panel above the product list shows the most recent 50 entries from `StockTaken` (who, what, how much, resulting stock), newest first, and refreshes automatically right after anyone takes stock. Requires the `StockTaken` tab to exist — without it, the panel just says there's nothing to show.

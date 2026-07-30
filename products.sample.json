@@ -7,6 +7,6 @@
   { "sku": "SKU-1006", "description": "Safety Glasses Clear Lens", "category": "PPE", "oem": "", "supplier": "", "supplierLink": "", "location": "A3", "currentStock": 6, "minLevel": 4, "unit": "each", "imageFilename": "" },
   { "sku": "SKU-1007", "description": "Grease Cartridge EP2 400g", "category": "Lubricants", "oem": "", "supplier": "", "supplierLink": "", "location": "B1", "currentStock": 3, "minLevel": 3, "unit": "each", "imageFilename": "" },
   { "sku": "SKU-1008", "description": "Hydraulic Hose Fitting 1/2in BSP", "category": "Hydraulics", "oem": "", "supplier": "", "supplierLink": "", "location": "B1", "currentStock": 0, "minLevel": 2, "unit": "each", "imageFilename": "" },
-  { "sku": "SKU-1009", "description": "Conveyor Belt Roller Bearing 6204", "category": "Bearings", "oem": "6204-2RS", "supplier": "", "supplierLink": "", "location": "B2", "currentStock": 5, "minLevel": 1, "unit": "each", "imageFilename": "" },
+  { "sku": "SKU-1009", "description": "Conveyor Belt Roller Bearing 6204", "category": "Bearings", "oem": "6204-2RS", "supplier": "", "supplierLink": "", "datasheetLink": "https://example.com/6204-2rs-datasheet.pdf", "location": "B2", "currentStock": 5, "minLevel": 1, "unit": "each", "imageFilename": "" },
   { "sku": "SKU-1010", "description": "Cutting Fluid 5L", "category": "Lubricants", "oem": "", "supplier": "", "supplierLink": "", "location": "B2", "currentStock": 1, "minLevel": "", "unit": "5L drum", "imageFilename": "" }
 ]

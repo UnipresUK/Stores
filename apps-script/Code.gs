@@ -9,8 +9,11 @@ var REQUESTS_SHEET = "Requests";
 var STOCK_LOG_SHEET = "StockTaken";
 
 function doGet(e) {
-  var products = readProducts();
-  return jsonResponse(products);
+  var action = (e.parameter && e.parameter.action) || "products";
+  if (action === "transactions") {
+    return jsonResponse(readRecentTransactions());
+  }
+  return jsonResponse(readProducts());
 }
 
 function doPost(e) {
@@ -92,6 +95,7 @@ function readProducts() {
     oem: headers.indexOf("oem"),
     supplier: headers.indexOf("supplier"),
     supplierLink: headers.indexOf("supplier link"),
+    datasheetLink: headers.indexOf("datasheet link"),
     location: headers.indexOf("location"),
     currentStock: headers.indexOf("current stock"),
     minLevel: headers.indexOf("min level"),
@@ -110,6 +114,7 @@ function readProducts() {
       oem: col.oem >= 0 ? row[col.oem].toString() : "",
       supplier: col.supplier >= 0 ? row[col.supplier].toString() : "",
       supplierLink: col.supplierLink >= 0 ? row[col.supplierLink].toString() : "",
+      datasheetLink: col.datasheetLink >= 0 ? row[col.datasheetLink].toString() : "",
       location: col.location >= 0 ? row[col.location].toString() : "",
       currentStock: col.currentStock >= 0 ? row[col.currentStock] : "",
       minLevel: col.minLevel >= 0 ? row[col.minLevel] : "",
@@ -118,6 +123,39 @@ function readProducts() {
     });
   }
   return products;
+}
+
+function readRecentTransactions() {
+  var LIMIT = 50;
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_LOG_SHEET);
+  if (!sheet) return [];
+
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function (h) { return h.toString().trim().toLowerCase(); });
+  var col = {
+    timestamp: headers.indexOf("timestamp"),
+    requester: headers.indexOf("requester"),
+    sku: headers.indexOf("sku"),
+    qty: headers.indexOf("qty taken"),
+    newStock: headers.indexOf("new stock"),
+  };
+
+  var rows = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (!row[col.sku]) continue;
+    var ts = col.timestamp >= 0 ? row[col.timestamp] : "";
+    rows.push({
+      timestamp: ts instanceof Date ? ts.toISOString() : ts.toString(),
+      requester: col.requester >= 0 ? row[col.requester].toString() : "",
+      sku: row[col.sku].toString(),
+      qty: col.qty >= 0 ? row[col.qty] : "",
+      newStock: col.newStock >= 0 ? row[col.newStock] : "",
+    });
+  }
+
+  rows.reverse(); // most recent first
+  return rows.slice(0, LIMIT);
 }
 
 function appendRequests(requester, items) {
