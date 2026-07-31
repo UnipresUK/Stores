@@ -94,6 +94,16 @@ body {
   width: 100%;
 }
 
+.subcategory-select {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
 .checkbox-field {
   display: flex;
   align-items: center;
@@ -170,10 +180,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
+  max-height: 60vh;
   overflow-y: auto;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--muted);
+}
+
+#removalsOverlay .confirm-card {
+  max-width: 640px;
+  max-height: 85vh;
 }
 
 .removal-row {

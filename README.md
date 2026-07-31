@@ -10,14 +10,15 @@ Create a new Google Sheet with three tabs:
 
 **`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
-| SKU | Description | Category | OEM | Part Number | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Max Level | Unit | Image Filename |
-|-----|-------------|----------|-----|-------------|----------|----------------|-----------------|----------|----------------|-----------|-----------|------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | 20 | box of 100 | sku-1001.jpg |
+| SKU | Description | Category | Subcategory | OEM | Part Number | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Max Level | Unit | Image Filename |
+|-----|-------------|----------|-------------|-----|-------------|----------|----------------|-----------------|----------|----------------|-----------|-----------|------|-----------------|
+| SKU-1001 | Malleable Iron Tee - 1" | Iron Fittings | Tee | | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | 20 | box of 100 | sku-1001.jpg |
 
 - Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
 - Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
 - `Max Level` (optional) is the target stock level for a full restock — see "Restock to Max Level" under the reorder flow below. Leave it blank for products where that option shouldn't apply.
-- `Category`, `Part Number`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). The card shows **"Part No:"** using whichever of `Part Number` / `OEM` is filled in (`Part Number` wins if both are).
+- `Category`, `Subcategory`, `Part Number`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). The card shows **"Part No:"** using whichever of `Part Number` / `OEM` is filled in (`Part Number` wins if both are).
+- `Subcategory` (optional) powers a second-level dropdown: tapping a category chip (e.g. "Iron Fittings") reveals a dropdown of whatever subcategories exist within it (e.g. "Tee", "Nipple", "Reducer", "Bush"), built live from your data. Products with no `Subcategory` just won't offer that dropdown.
 - `Supplier Link` (optional) renders as a clickable link on the product card so whoever's ordering can jump straight to the supplier's page.
 - `Datasheet Link` (optional) renders as a separate "View datasheet" link, for a technical spec sheet/PDF distinct from the supplier's purchase page.
 - `Unit` (optional, e.g. "each", "box of 100") is shown next to the stock count so there's no ambiguity about what a "+1" reorder actually represents.

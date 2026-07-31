@@ -11,6 +11,7 @@ const state = {
   pending: new Map(), // sku -> reorder qty
   takeQty: new Map(), // sku -> qty about to be taken (local only, defaults to 1)
   activeCategory: null, // set by tapping a category chip; null means "All"
+  activeSubcategory: null, // set via the subcategory dropdown; null means "All"
 };
 
 const els = {
@@ -21,6 +22,7 @@ const els = {
   mainContent: document.getElementById("mainContent"),
   search: document.getElementById("search"),
   categoryChips: document.getElementById("categoryChips"),
+  subcategorySelect: document.getElementById("subcategorySelect"),
   lowStockOnly: document.getElementById("lowStockOnly"),
   hideImages: document.getElementById("hideImages"),
   status: document.getElementById("status"),
@@ -78,6 +80,7 @@ function init() {
 
   els.search.addEventListener("input", () => renderGrid());
   els.lowStockOnly.addEventListener("change", () => renderGrid());
+  els.subcategorySelect.addEventListener("change", () => selectSubcategory(els.subcategorySelect.value));
 
   els.hideImages.checked = localStorage.getItem(HIDE_IMAGES_KEY) === "true";
   els.grid.classList.toggle("hide-images", els.hideImages.checked);
@@ -280,7 +283,7 @@ async function loadProducts() {
 
 function matchesSearch(product, term) {
   if (!term) return true;
-  const haystack = `${product.sku} ${product.description} ${product.location} ${product.category || ""} ${product.oem || ""} ${product.partNumber || ""} ${product.supplier || ""}`.toLowerCase();
+  const haystack = `${product.sku} ${product.description} ${product.location} ${product.category || ""} ${product.subcategory || ""} ${product.oem || ""} ${product.partNumber || ""} ${product.supplier || ""}`.toLowerCase();
   return haystack.includes(term);
 }
 
@@ -305,7 +308,10 @@ function renderCategoryChips() {
 
   els.categoryChips.innerHTML = "";
 
-  if (categories.length === 0) return;
+  if (categories.length === 0) {
+    renderSubcategoryOptions();
+    return;
+  }
 
   const allChip = document.createElement("button");
   allChip.type = "button";
@@ -322,11 +328,66 @@ function renderCategoryChips() {
     chip.addEventListener("click", () => selectCategory(category));
     els.categoryChips.appendChild(chip);
   }
+
+  renderSubcategoryOptions();
 }
 
 function selectCategory(category) {
   state.activeCategory = category;
+  state.activeSubcategory = null;
   renderCategoryChips();
+  renderGrid();
+}
+
+function renderSubcategoryOptions() {
+  if (!state.activeCategory) {
+    state.activeSubcategory = null;
+    els.subcategorySelect.classList.add("hidden");
+    els.subcategorySelect.innerHTML = "";
+    return;
+  }
+
+  const subcategories = Array.from(
+    new Set(
+      state.products
+        .filter((p) => p.category === state.activeCategory)
+        .map((p) => (p.subcategory || "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  if (subcategories.length === 0) {
+    state.activeSubcategory = null;
+    els.subcategorySelect.classList.add("hidden");
+    els.subcategorySelect.innerHTML = "";
+    return;
+  }
+
+  // Dropping a subcategory that's no longer valid for the current category
+  // (e.g. category was switched, or the Sheet data changed).
+  if (state.activeSubcategory && !subcategories.includes(state.activeSubcategory)) {
+    state.activeSubcategory = null;
+  }
+
+  els.subcategorySelect.innerHTML = "";
+  const allOption = document.createElement("option");
+  allOption.value = "";
+  allOption.textContent = `All ${state.activeCategory}`;
+  els.subcategorySelect.appendChild(allOption);
+
+  for (const sub of subcategories) {
+    const opt = document.createElement("option");
+    opt.value = sub;
+    opt.textContent = sub;
+    els.subcategorySelect.appendChild(opt);
+  }
+
+  els.subcategorySelect.value = state.activeSubcategory || "";
+  els.subcategorySelect.classList.remove("hidden");
+}
+
+function selectSubcategory(subcategory) {
+  state.activeSubcategory = subcategory || null;
   renderGrid();
 }
 
@@ -336,7 +397,8 @@ function renderGrid() {
   const filtered = state.products
     .filter((p) => matchesSearch(p, term))
     .filter((p) => !lowStockOnly || isLowStock(p))
-    .filter((p) => !state.activeCategory || p.category === state.activeCategory);
+    .filter((p) => !state.activeCategory || p.category === state.activeCategory)
+    .filter((p) => !state.activeSubcategory || p.subcategory === state.activeSubcategory);
 
   els.grid.innerHTML = "";
   for (const product of filtered) {
