@@ -10,26 +10,27 @@ Create a new Google Sheet with three tabs:
 
 **`Products`** — one row per SKU. Columns are matched by header name, not position, so you can add them in any order:
 
-| SKU | Description | Category | OEM | Part Number | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Unit | Image Filename |
-|-----|-------------|----------|-----|-------------|----------|----------------|-----------------|----------|----------------|-----------|------|-----------------|
-| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | box of 100 | sku-1001.jpg |
+| SKU | Description | Category | OEM | Part Number | Supplier | Supplier Link | Datasheet Link | Location | Current Stock | Min Level | Max Level | Unit | Image Filename |
+|-----|-------------|----------|-----|-------------|----------|----------------|-----------------|----------|----------------|-----------|-----------|------|-----------------|
+| SKU-1001 | M8 Hex Bolt 40mm | Fasteners | | ISO 4017 | RS Online | https://... | https://...pdf | A1 | 4 | 5 | 20 | box of 100 | sku-1001.jpg |
 
 - Leave `Image Filename` blank for products without a photo yet — the page falls back to a placeholder icon.
 - Leave `Min Level` blank for products you don't want flagged automatically. When `Current Stock` drops to or below `Min Level`, the page shows a red "Low stock" badge on that product and it's included when the "Low stock only" filter is ticked — it's just a visual flag to prompt someone to reorder, nothing gets submitted automatically.
+- `Max Level` (optional) is the target stock level for a full restock — see "Restock to Max Level" under the reorder flow below. Leave it blank for products where that option shouldn't apply.
 - `Category`, `Part Number`, `OEM`, and `Supplier` are all optional and searchable on the page (e.g. searching "Reducer" or a supplier name matches). The card shows **"Part No:"** using whichever of `Part Number` / `OEM` is filled in (`Part Number` wins if both are).
 - `Supplier Link` (optional) renders as a clickable link on the product card so whoever's ordering can jump straight to the supplier's page.
 - `Datasheet Link` (optional) renders as a separate "View datasheet" link, for a technical spec sheet/PDF distinct from the supplier's purchase page.
 - `Unit` (optional, e.g. "each", "box of 100") is shown next to the stock count so there's no ambiguity about what a "+1" reorder actually represents.
 
-**`Requests`** — leave empty except for a header row, Apps Script appends to it:
+**`Requests`** — leave empty except for a header row, Apps Script appends to it. **Column order matters here** (unlike `Products`, these are written by position, not header name):
 
-| Timestamp | Requester | SKU | Qty Requested |
-|-----------|-----------|-----|-----------------|
+| Timestamp | Requester | SKU | Qty Requested | Description |
+|-----------|-----------|-----|-----------------|--------------|
 
-**`StockTaken`** (optional but recommended) — an audit log of who took what off the shelf; leave empty except for a header row:
+**`StockTaken`** (optional but recommended) — an audit log of who took what off the shelf; leave empty except for a header row. Column order matters here too:
 
-| Timestamp | Requester | SKU | Qty Taken | New Stock |
-|-----------|-----------|-----|-----------|-----------|
+| Timestamp | Requester | SKU | Qty Taken | New Stock | Description |
+|-----------|-----------|-----|-----------|-----------|--------------|
 
 This tab is optional — if you skip it, taking stock still works and still updates `Current Stock`, it just won't be logged anywhere.
 
@@ -74,7 +75,8 @@ Two ways to fill in `Image Filename`:
 - Team member picks their name (or types a new one) and browses/searches the product list.
 - Tapping **+**/**−** on a product only adjusts a local counter — nothing is sent yet.
 - Once anything is flagged, a bar appears at the bottom to **Submit Order**.
-- Submitting sends one batched request: it logs a row per item in `Requests` and sends a single summary email, rather than emailing on every button tap.
+- The confirm screen offers two modes for the whole order: **"Order the quantity selected"** (the stepper numbers, as-is) or **"Restock each item to its Max Level"** (each item's quantity becomes `Max Level − Current Stock` instead — falling back to the selected quantity for any product without a `Max Level` set). Switching the radio button live-updates the quantities shown before you send anything.
+- Submitting sends one batched request: it logs a row per item in `Requests` and sends a single summary email listing each item **by description**, not SKU, rather than emailing on every button tap.
 - Flagged quantities are saved to the device's local storage as you go, so closing the tab or reloading the page won't lose them — and the browser will warn before letting anyone navigate away or close the tab while something is still unsubmitted.
 - Each device/browser is independent (name, search, and pending quantities aren't shared between devices), so multiple people can use the page from their own phones at the same time without conflicting. Submissions from different devices at the same moment are queued safely on the backend so none get lost.
 
@@ -84,12 +86,13 @@ Separate from reordering, each product also has a **Take stock** control so `Cur
 
 - Adjust the quantity, tap **Take**, and it's applied immediately — no confirm step, since this happens far more often than reordering and isn't worth the extra friction of a confirm screen.
 - `Current Stock` is updated straight away (never going below 0), which means the "Low stock" badge and filter stay accurate automatically instead of relying on a manual stock check.
-- If `StockTaken` exists, every take is logged with who, what, how much, and the resulting stock level, for traceability.
-- An email is sent to `NOTIFY_EMAIL` for every single take (not batched), so you'll get one email per Take action, controlled by the Settings toggle below. If usage picks up and this becomes too much volume, this is easy to change to a periodic digest instead — just ask.
+- If `StockTaken` exists, every take is logged with who, what (by description), how much, and the resulting stock level, for traceability.
+- An email is sent to `NOTIFY_EMAIL` for every single take (not batched), referring to the product by description rather than SKU, controlled by the Settings toggle below. If usage picks up and this becomes too much volume, this is easy to change to a periodic digest instead — just ask.
 
-## Settings and the recent removals log
+## Recent removals and Settings
 
-The gear icon (top right) opens a small **Settings** panel with two things:
+A clock icon (top right, next to the gear) opens **Recent removals** on demand — a popup listing the most recent 50 entries from `StockTaken` (who, what by description, how much, resulting stock), newest first. It's no longer an always-visible panel on the main page; it only loads when you tap the icon, and refreshes automatically if it's left open right after someone takes stock. Requires the `StockTaken` tab to exist — without it, it just says there's nothing to show.
 
-- **"Show recent stock removals"** — no passcode needed, since it only affects what that device displays. Defaults to **on** the first time anyone opens the page on a given device, so you can watch every Take Stock action as it happens while the system is new. When on, a panel above the product list shows the most recent 50 entries from `StockTaken` (who, what, how much, resulting stock), newest first, refreshing automatically right after anyone takes stock. Requires the `StockTaken` tab to exist — without it, the panel just says there's nothing to show.
+The gear icon opens **Settings**, currently just:
+
 - **"Email me on every stock take"** — behind the `SETTINGS_PASSCODE` you set in `Code.gs`, since this controls whether *you* get emailed and shouldn't be something anyone with the link can switch off. Enter the passcode once per visit to unlock it; the actual check happens on the backend, so it can't be bypassed by hiding the button client-side.

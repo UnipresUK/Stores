@@ -4,7 +4,6 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH56EVZ9tPDP7A5jg3B9GcCOu1GnDsVwL2MXWDaCJqxltXQQ/exec";
 
 const PENDING_STORAGE_KEY = "pendingOrders";
-const SHOW_REMOVALS_KEY = "showRemovals";
 const HIDE_IMAGES_KEY = "hideImages";
 
 const state = {
@@ -36,14 +35,15 @@ const els = {
   confirmSubmitBtn: document.getElementById("confirmSubmitBtn"),
   settingsBtn: document.getElementById("settingsBtn"),
   settingsOverlay: document.getElementById("settingsOverlay"),
-  showRemovalsToggle: document.getElementById("showRemovalsToggle"),
   settingsCloseBtn: document.getElementById("settingsCloseBtn"),
   settingsLocked: document.getElementById("settingsLocked"),
   settingsUnlocked: document.getElementById("settingsUnlocked"),
   settingsPasscodeInput: document.getElementById("settingsPasscodeInput"),
   settingsUnlockBtn: document.getElementById("settingsUnlockBtn"),
   takeEmailToggle: document.getElementById("takeEmailToggle"),
-  removalsPanel: document.getElementById("removalsPanel"),
+  removalsBtn: document.getElementById("removalsBtn"),
+  removalsOverlay: document.getElementById("removalsOverlay"),
+  removalsCloseBtn: document.getElementById("removalsCloseBtn"),
   removalsList: document.getElementById("removalsList"),
   toast: document.getElementById("toast"),
 };
@@ -71,6 +71,7 @@ function init() {
   els.gateContinueBtn.addEventListener("click", confirmGateName);
 
   initSettings();
+  initRemovals();
 
   restorePending();
   updateCartBar();
@@ -87,6 +88,9 @@ function init() {
   els.cartSubmitBtn.addEventListener("click", openConfirm);
   els.confirmCancelBtn.addEventListener("click", closeConfirm);
   els.confirmSubmitBtn.addEventListener("click", submitOrder);
+  document.querySelectorAll('input[name="orderMode"]').forEach((radio) => {
+    radio.addEventListener("change", renderConfirmList);
+  });
 
   // Warn before leaving so nobody loses flagged reorders by accidentally
   // closing the tab or navigating away without hitting Submit Order.
@@ -120,27 +124,11 @@ function passGate() {
 }
 
 function initSettings() {
-  // Defaults to ON the first time (no stored preference yet), since the
-  // point of this is to watch every removal closely while the system is new.
-  const stored = localStorage.getItem(SHOW_REMOVALS_KEY);
-  const showRemovals = stored === null ? true : stored === "true";
-  els.showRemovalsToggle.checked = showRemovals;
-  if (showRemovals) {
-    els.removalsPanel.classList.remove("hidden");
-    loadTransactions();
-  }
-
   els.settingsBtn.addEventListener("click", () => {
     els.settingsOverlay.classList.remove("hidden");
   });
   els.settingsCloseBtn.addEventListener("click", () => {
     els.settingsOverlay.classList.add("hidden");
-  });
-  els.showRemovalsToggle.addEventListener("change", () => {
-    const checked = els.showRemovalsToggle.checked;
-    localStorage.setItem(SHOW_REMOVALS_KEY, checked);
-    els.removalsPanel.classList.toggle("hidden", !checked);
-    if (checked) loadTransactions();
   });
 
   els.settingsUnlockBtn.addEventListener("click", unlockSettings);
@@ -148,6 +136,16 @@ function initSettings() {
     if (e.key === "Enter") unlockSettings();
   });
   els.takeEmailToggle.addEventListener("change", updateTakeEmailSetting);
+}
+
+function initRemovals() {
+  els.removalsBtn.addEventListener("click", () => {
+    els.removalsOverlay.classList.remove("hidden");
+    loadTransactions();
+  });
+  els.removalsCloseBtn.addEventListener("click", () => {
+    els.removalsOverlay.classList.add("hidden");
+  });
 }
 
 let settingsPasscode = null;
@@ -229,10 +227,16 @@ function renderTransactions(transactions) {
     <div class="removal-row">
       <span class="removal-when">${escapeHtml(formatTimestamp(t.timestamp))}</span>
       <span class="removal-who">${escapeHtml(t.requester)}</span>
-      <span class="removal-what">${escapeHtml(t.sku)} &minus;${escapeHtml(String(t.qty))}</span>
+      <span class="removal-what">${escapeHtml(describeSku(t))} &minus;${escapeHtml(String(t.qty))}</span>
       <span class="removal-stock">now ${escapeHtml(String(t.newStock))}</span>
     </div>
   `).join("");
+}
+
+function describeSku(item) {
+  if (item.description) return item.description;
+  const product = state.products.find((p) => p.sku === item.sku);
+  return product ? product.description : item.sku;
 }
 
 function formatTimestamp(iso) {
@@ -490,24 +494,24 @@ async function takeStock(sku, buttonEl) {
   }
 
   const qty = state.takeQty.get(sku) || 1;
+  const product = state.products.find((p) => p.sku === sku);
+  const description = product ? product.description : sku;
   buttonEl.disabled = true;
 
   try {
     if (API_URL) {
       const res = await fetch(`${API_URL}?action=take`, {
         method: "POST",
-        body: JSON.stringify({ requester, sku, qty }),
+        body: JSON.stringify({ requester, sku, qty, description }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Unknown error");
 
-      const product = state.products.find((p) => p.sku === sku);
       if (product) product.currentStock = data.currentStock;
     } else {
-      console.log("Simulated take (no API_URL set):", { requester, sku, qty });
+      console.log("Simulated take (no API_URL set):", { requester, sku, qty, description });
       await new Promise((r) => setTimeout(r, 300));
-      const product = state.products.find((p) => p.sku === sku);
       if (product) {
         product.currentStock = Math.max(0, Number(product.currentStock) - qty);
       }
@@ -515,8 +519,8 @@ async function takeStock(sku, buttonEl) {
 
     state.takeQty.delete(sku);
     renderGrid();
-    showToast(`Took ${qty} of ${sku}.`);
-    if (!els.removalsPanel.classList.contains("hidden")) loadTransactions();
+    showToast(`Took ${qty} of ${description}.`);
+    if (!els.removalsOverlay.classList.contains("hidden")) loadTransactions();
   } catch (err) {
     console.error(err);
     showToast("Failed to record stock taken. Please try again.");
@@ -534,6 +538,21 @@ function updateCartBar() {
   els.cartCount.textContent = `${count} product${count === 1 ? "" : "s"} flagged for reorder`;
 }
 
+function getOrderMode() {
+  const checked = document.querySelector('input[name="orderMode"]:checked');
+  return checked ? checked.value : "selected";
+}
+
+function computeOrderQty(product, selectedQty, mode) {
+  if (mode !== "max") return selectedQty;
+  const max = Number(product && product.maxLevel);
+  if (!product || product.maxLevel === "" || product.maxLevel == null || Number.isNaN(max)) {
+    return selectedQty; // no Max Level set for this product -- fall back to what was selected
+  }
+  const current = Number(product.currentStock) || 0;
+  return Math.max(0, max - current);
+}
+
 function openConfirm() {
   const name = els.requester.value.trim();
   if (!name) {
@@ -543,14 +562,21 @@ function openConfirm() {
   }
 
   els.confirmRequester.textContent = name;
+  document.querySelector('input[name="orderMode"][value="selected"]').checked = true;
+  renderConfirmList();
+  els.confirmOverlay.classList.remove("hidden");
+}
+
+function renderConfirmList() {
+  const mode = getOrderMode();
   els.confirmList.innerHTML = "";
-  for (const [sku, qty] of state.pending.entries()) {
+  for (const [sku, selectedQty] of state.pending.entries()) {
     const product = state.products.find((p) => p.sku === sku);
+    const qty = computeOrderQty(product, selectedQty, mode);
     const li = document.createElement("li");
-    li.innerHTML = `<span>${escapeHtml(sku)} — ${escapeHtml(product ? product.description : "")}</span><strong>${qty}</strong>`;
+    li.innerHTML = `<span>${escapeHtml(product ? product.description : sku)}</span><strong>${qty}</strong>`;
     els.confirmList.appendChild(li);
   }
-  els.confirmOverlay.classList.remove("hidden");
 }
 
 function closeConfirm() {
@@ -559,7 +585,15 @@ function closeConfirm() {
 
 async function submitOrder() {
   const requester = els.requester.value.trim();
-  const items = Array.from(state.pending.entries()).map(([sku, qty]) => ({ sku, qty }));
+  const mode = getOrderMode();
+  const items = Array.from(state.pending.entries()).map(([sku, selectedQty]) => {
+    const product = state.products.find((p) => p.sku === sku);
+    return {
+      sku,
+      qty: computeOrderQty(product, selectedQty, mode),
+      description: product ? product.description : sku,
+    };
+  });
   const payload = { requester, items };
 
   els.confirmSubmitBtn.disabled = true;

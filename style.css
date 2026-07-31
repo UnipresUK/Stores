@@ -56,6 +56,11 @@ body {
   margin-bottom: 4px;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .settings-btn {
   border: 1px solid var(--border);
   background: var(--bg);
@@ -159,19 +164,6 @@ body {
   padding: 0 16px;
   color: var(--muted);
   font-size: 0.9rem;
-}
-
-.removals-panel {
-  margin: 12px 16px 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card-bg);
-  padding: 12px;
-}
-
-.removals-panel h2 {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
 }
 
 .removals-list {
@@ -433,6 +425,23 @@ body {
   border: none;
   border-top: 1px solid var(--border);
   margin: 16px 0;
+}
+
+.order-mode-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.radio-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
 }
 
 .confirm-list {

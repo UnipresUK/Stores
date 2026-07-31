@@ -90,6 +90,7 @@ function handleTakeStock(body) {
   var requester = (body.requester || "").toString().trim();
   var sku = (body.sku || "").toString().trim();
   var qty = Number(body.qty);
+  var description = (body.description || sku).toString().trim();
 
   if (!requester || !sku || !qty || qty <= 0) {
     return jsonResponse({ ok: false, error: "requester, sku, and a positive qty are required" });
@@ -109,9 +110,9 @@ function handleTakeStock(body) {
     lock.releaseLock();
   }
 
-  appendStockLog(requester, sku, qty, newStock);
+  appendStockLog(requester, sku, description, qty, newStock);
   if (isTakeEmailEnabled()) {
-    sendTakeNotificationEmail(requester, sku, qty, newStock);
+    sendTakeNotificationEmail(requester, description, qty, newStock);
   }
 
   return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
@@ -134,6 +135,7 @@ function readProducts() {
     location: headers.indexOf("location"),
     currentStock: headers.indexOf("current stock"),
     minLevel: headers.indexOf("min level"),
+    maxLevel: headers.indexOf("max level"),
     unit: headers.indexOf("unit"),
     imageFilename: headers.indexOf("image filename"),
   };
@@ -154,6 +156,7 @@ function readProducts() {
       location: col.location >= 0 ? row[col.location].toString() : "",
       currentStock: col.currentStock >= 0 ? row[col.currentStock] : "",
       minLevel: col.minLevel >= 0 ? row[col.minLevel] : "",
+      maxLevel: col.maxLevel >= 0 ? row[col.maxLevel] : "",
       unit: col.unit >= 0 ? row[col.unit].toString() : "",
       imageFilename: col.imageFilename >= 0 ? row[col.imageFilename].toString() : "",
     });
@@ -172,6 +175,7 @@ function readRecentTransactions() {
     timestamp: headers.indexOf("timestamp"),
     requester: headers.indexOf("requester"),
     sku: headers.indexOf("sku"),
+    description: headers.indexOf("description"),
     qty: headers.indexOf("qty taken"),
     newStock: headers.indexOf("new stock"),
   };
@@ -185,6 +189,7 @@ function readRecentTransactions() {
       timestamp: ts instanceof Date ? ts.toISOString() : ts.toString(),
       requester: col.requester >= 0 ? row[col.requester].toString() : "",
       sku: row[col.sku].toString(),
+      description: col.description >= 0 ? row[col.description].toString() : "",
       qty: col.qty >= 0 ? row[col.qty] : "",
       newStock: col.newStock >= 0 ? row[col.newStock] : "",
     });
@@ -198,9 +203,9 @@ function appendRequests(requester, items) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REQUESTS_SHEET);
   var timestamp = new Date();
   var rows = items.map(function (item) {
-    return [timestamp, requester, item.sku, item.qty];
+    return [timestamp, requester, item.sku, item.qty, item.description || ""];
   });
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
 }
 
 function deductStock(sku, qty) {
@@ -226,15 +231,15 @@ function deductStock(sku, qty) {
   throw new Error("SKU not found: " + sku);
 }
 
-function appendStockLog(requester, sku, qty, newStock) {
+function appendStockLog(requester, sku, description, qty, newStock) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(STOCK_LOG_SHEET);
   if (!sheet) return; // optional tab -- skip logging if it hasn't been created
-  sheet.appendRow([new Date(), requester, sku, qty, newStock]);
+  sheet.appendRow([new Date(), requester, sku, qty, newStock, description]);
 }
 
 function sendNotificationEmail(requester, items) {
   var lines = items.map(function (item) {
-    return "  - " + item.sku + "  x" + item.qty;
+    return "  - " + item.description + "  x" + item.qty;
   });
 
   var subject = "Stock reorder request from " + requester;
@@ -246,10 +251,10 @@ function sendNotificationEmail(requester, items) {
   MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
 }
 
-function sendTakeNotificationEmail(requester, sku, qty, newStock) {
-  var subject = requester + " took stock: " + sku;
+function sendTakeNotificationEmail(requester, description, qty, newStock) {
+  var subject = requester + " took stock: " + description;
   var body =
-    requester + " took " + qty + " of " + sku + ".\n\n" +
+    requester + " took " + qty + " of " + description + ".\n\n" +
     "New stock level: " + newStock +
     "\n\nTaken: " + new Date().toLocaleString();
 
