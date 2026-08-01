@@ -5,6 +5,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwM7b0nUJIwizdppHMk7FAH
 
 const PENDING_STORAGE_KEY = "pendingOrders";
 const HIDE_IMAGES_KEY = "hideImages";
+const REORDER_FLAG_DAYS = 14; // how long "already reordered" shows before auto-expiring
 
 const state = {
   products: [],
@@ -35,6 +36,11 @@ const els = {
   confirmList: document.getElementById("confirmList"),
   confirmCancelBtn: document.getElementById("confirmCancelBtn"),
   confirmSubmitBtn: document.getElementById("confirmSubmitBtn"),
+  projectOrderToggle: document.getElementById("projectOrderToggle"),
+  projectNameField: document.getElementById("projectNameField"),
+  projectNameInput: document.getElementById("projectNameInput"),
+  duplicateWarning: document.getElementById("duplicateWarning"),
+  duplicateAckCheckbox: document.getElementById("duplicateAckCheckbox"),
   settingsBtn: document.getElementById("settingsBtn"),
   settingsOverlay: document.getElementById("settingsOverlay"),
   settingsCloseBtn: document.getElementById("settingsCloseBtn"),
@@ -93,6 +99,10 @@ function init() {
   els.confirmSubmitBtn.addEventListener("click", submitOrder);
   document.querySelectorAll('input[name="orderMode"]').forEach((radio) => {
     radio.addEventListener("change", renderConfirmList);
+  });
+  els.projectOrderToggle.addEventListener("change", () => {
+    els.projectNameField.classList.toggle("hidden", !els.projectOrderToggle.checked);
+    renderConfirmList();
   });
 
   // Warn before leaving so nobody loses flagged reorders by accidentally
@@ -295,6 +305,15 @@ function isLowStock(product) {
   return current <= min;
 }
 
+function isRecentlyReordered(product) {
+  const info = product && product.lastReorder;
+  if (!info || info.resolved) return false;
+  const ts = new Date(info.timestamp);
+  if (isNaN(ts.getTime())) return false;
+  const daysSince = (Date.now() - ts.getTime()) / (1000 * 60 * 60 * 24);
+  return daysSince < REORDER_FLAG_DAYS;
+}
+
 function renderCategoryChips() {
   const categories = Array.from(
     new Set(state.products.map((p) => (p.category || "").trim()).filter(Boolean))
@@ -454,6 +473,10 @@ function renderCard(product) {
   `;
   card.appendChild(info);
 
+  if (isRecentlyReordered(product)) {
+    card.appendChild(renderReorderBanner(product));
+  }
+
   const stepper = document.createElement("div");
   stepper.className = "stepper";
 
@@ -482,6 +505,61 @@ function renderCard(product) {
   card.appendChild(renderTakeStockRow(product));
 
   return card;
+}
+
+function renderReorderBanner(product) {
+  const info = product.lastReorder;
+  const banner = document.createElement("div");
+  banner.className = "reorder-banner";
+
+  const text = document.createElement("span");
+  text.textContent = `Already reordered by ${info.requester} (${daysAgoText(info.timestamp)})`;
+  banner.appendChild(text);
+
+  const resolveBtn = document.createElement("button");
+  resolveBtn.type = "button";
+  resolveBtn.className = "resolve-btn";
+  resolveBtn.textContent = "Restocked";
+  resolveBtn.addEventListener("click", () => resolveReorder(product.sku, resolveBtn));
+  banner.appendChild(resolveBtn);
+
+  return banner;
+}
+
+function daysAgoText(iso) {
+  const ts = new Date(iso);
+  if (isNaN(ts.getTime())) return "recently";
+  const days = Math.floor((Date.now() - ts.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
+}
+
+async function resolveReorder(sku, buttonEl) {
+  buttonEl.disabled = true;
+  try {
+    if (API_URL) {
+      const res = await fetch(`${API_URL}?action=resolveReorder`, {
+        method: "POST",
+        body: JSON.stringify({ sku }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Unknown error");
+    } else {
+      console.log("Simulated resolve (no API_URL set):", { sku });
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
+    const product = state.products.find((p) => p.sku === sku);
+    if (product && product.lastReorder) product.lastReorder.resolved = true;
+    renderGrid();
+    showToast("Marked as restocked.");
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to update. Please try again.");
+    buttonEl.disabled = false;
+  }
 }
 
 function renderTakeStockRow(product) {
@@ -625,25 +703,43 @@ function openConfirm() {
 
   els.confirmRequester.textContent = name;
   document.querySelector('input[name="orderMode"][value="selected"]').checked = true;
+  els.projectOrderToggle.checked = false;
+  els.projectNameField.classList.add("hidden");
+  els.projectNameInput.value = "";
+  els.duplicateAckCheckbox.checked = false;
   renderConfirmList();
   els.confirmOverlay.classList.remove("hidden");
 }
 
 function renderConfirmList() {
   const mode = getOrderMode();
+  const isProjectOrder = els.projectOrderToggle.checked;
   els.confirmList.innerHTML = "";
+  let hasDuplicate = false;
+
   for (const [sku, selectedQty] of state.pending.entries()) {
     const product = state.products.find((p) => p.sku === sku);
     const qty = computeOrderQty(product, selectedQty, mode);
     const atMaxHint = mode === "max" && qty === 0 ? '<span class="at-max-hint">(at Max Level)</span>' : "";
 
+    // Project orders are a separate concern from stores restocking, so the
+    // duplicate-reorder check doesn't apply to them.
+    const flagged = !isProjectOrder && isRecentlyReordered(product);
+    if (flagged) hasDuplicate = true;
+    const duplicateHint = flagged
+      ? `<span class="duplicate-hint">&#9888; already reordered by ${escapeHtml(product.lastReorder.requester)} (${escapeHtml(daysAgoText(product.lastReorder.timestamp))})</span>`
+      : "";
+
     const li = document.createElement("li");
     li.innerHTML = `
-      <span>${escapeHtml(product ? product.description : sku)}${atMaxHint}</span>
+      <span>${escapeHtml(product ? product.description : sku)}${atMaxHint}${duplicateHint}</span>
       <input type="number" class="confirm-qty-input" data-sku="${escapeAttr(sku)}" value="${qty}" min="0">
     `;
     els.confirmList.appendChild(li);
   }
+
+  els.duplicateWarning.classList.toggle("hidden", !hasDuplicate);
+  if (!hasDuplicate) els.duplicateAckCheckbox.checked = false;
 }
 
 function closeConfirm() {
@@ -652,6 +748,19 @@ function closeConfirm() {
 
 async function submitOrder() {
   const requester = els.requester.value.trim();
+  const isProjectOrder = els.projectOrderToggle.checked;
+  const projectName = els.projectNameInput.value.trim();
+
+  if (isProjectOrder && !projectName) {
+    showToast("Enter a project name/reference first.");
+    els.projectNameInput.focus();
+    return;
+  }
+
+  if (!isProjectOrder && !els.duplicateWarning.classList.contains("hidden") && !els.duplicateAckCheckbox.checked) {
+    showToast("Please tick the box to confirm you've checked the duplicate warning.");
+    return;
+  }
 
   // Read the confirm screen's inputs directly rather than recomputing, since
   // anyone can override the suggested quantity (e.g. a 0 "at Max Level" item
@@ -674,7 +783,9 @@ async function submitOrder() {
     return;
   }
 
-  const payload = { requester, items };
+  const payload = isProjectOrder
+    ? { requester, projectOrder: { name: projectName }, items }
+    : { requester, items };
 
   els.confirmSubmitBtn.disabled = true;
   els.confirmSubmitBtn.textContent = "Sending…";
@@ -688,9 +799,22 @@ async function submitOrder() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Unknown error");
     } else {
       console.log("Simulated submit (no API_URL set):", payload);
       await new Promise((r) => setTimeout(r, 400));
+    }
+
+    // Optimistically flag these as "already reordered" immediately, rather
+    // than waiting for the next full product reload, so the banner shows
+    // right away for anyone else browsing on this device.
+    if (!isProjectOrder) {
+      const now = new Date().toISOString();
+      items.forEach((item) => {
+        const product = state.products.find((p) => p.sku === item.sku);
+        if (product) product.lastReorder = { requester, timestamp: now, resolved: false };
+      });
     }
 
     state.pending.clear();
@@ -698,7 +822,7 @@ async function submitOrder() {
     closeConfirm();
     updateCartBar();
     renderGrid();
-    showToast("Order submitted.");
+    showToast(isProjectOrder ? "Project order submitted." : "Order submitted.");
   } catch (err) {
     console.error(err);
     showToast("Failed to submit order. Please try again.");

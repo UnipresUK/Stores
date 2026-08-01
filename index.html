@@ -87,6 +87,23 @@
       </label>
     </div>
 
+    <label class="checkbox-field">
+      <input id="projectOrderToggle" type="checkbox">
+      This is a Project Order (not a stores restock)
+    </label>
+    <div id="projectNameField" class="field hidden">
+      <label for="projectNameInput">Project name/reference</label>
+      <input id="projectNameInput" type="text" placeholder="e.g. Line 4 upgrade" autocomplete="off">
+    </div>
+
+    <div id="duplicateWarning" class="duplicate-warning hidden">
+      <p>&#9888; Some items below were already reordered recently -- check before sending again.</p>
+      <label class="checkbox-field">
+        <input id="duplicateAckCheckbox" type="checkbox">
+        I've checked and want to send anyway
+      </label>
+    </div>
+
     <ul id="confirmList" class="confirm-list"></ul>
     <div class="confirm-actions">
       <button id="confirmCancelBtn" type="button" class="secondary">Cancel</button>

@@ -35,6 +35,20 @@ Create a new Google Sheet with three tabs:
 
 This tab is optional — if you skip it, taking stock still works and still updates `Current Stock`, it just won't be logged anywhere.
 
+**`ReorderStatus`** (optional but recommended) — tracks whether each SKU has a recent, unresolved reorder, to power the "already reordered" banner. One row per SKU (the app creates/updates rows itself — you just need the tab and header row to exist). Unlike `Requests`/`StockTaken`, **columns here are matched by header name**, so order doesn't matter:
+
+| SKU | Requester | Timestamp | Resolved |
+|-----|-----------|-----------|----------|
+
+This tab is optional — without it, reorders still work, they just won't show the duplicate-reorder banner.
+
+**`ProjectOrders`** (required for the Project Order feature) — a separate log for orders placed for a specific project rather than general stores restocking, so they never touch `Current Stock` math or the reorder-status banner. Column order matters here too:
+
+| Timestamp | Requester | Project Name | SKU | Description | Qty |
+|-----------|-----------|---------------|-----|--------------|-----|
+
+If this tab doesn't exist, attempting a Project Order returns an error rather than silently failing.
+
 ## 2. Deploy the Apps Script backend
 
 1. In the Sheet, go to **Extensions > Apps Script**.
@@ -82,6 +96,16 @@ Two ways to fill in `Image Filename`:
 - Submitting sends one batched request: it logs a row per item in `Requests` and sends a single summary email listing each item **by description**, not SKU, rather than emailing on every button tap.
 - Flagged quantities are saved to the device's local storage as you go, so closing the tab or reloading the page won't lose them — and the browser will warn before letting anyone navigate away or close the tab while something is still unsubmitted.
 - Each device/browser is independent (name, search, and pending quantities aren't shared between devices), so multiple people can use the page from their own phones at the same time without conflicting. Submissions from different devices at the same moment are queued safely on the backend so none get lost.
+
+## Avoiding duplicate reorders
+
+Every product that's been reordered in the last **14 days** and not yet marked resolved shows a red **"Already reordered by [name] ([n] days ago)"** banner right on its card, with a **"Restocked"** button to clear it manually once the delivery arrives (it also auto-expires after 14 days even if nobody clicks it, in case that gets forgotten).
+
+If anything in your cart is still flagged when you open the confirm screen, a warning appears above the list and you have to tick **"I've checked and want to send anyway"** before the order can actually be sent — it doesn't block you outright, just makes sure it's a deliberate choice, not an accident.
+
+## Project Orders
+
+Tick **"This is a Project Order"** on the confirm screen to order catalog items for a specific project rather than restocking the shelf. It asks for a project name/reference, sends a distinctly-worded email so purchasing can tell it apart from a normal restock, and logs to the separate `ProjectOrders` tab instead of `Requests` — it never touches `Current Stock`, `Max Level` math, or the "already reordered" banner, since it's a different budget/reason for ordering, not stores replenishment. The duplicate-reorder warning above doesn't apply in this mode either, for the same reason.
 
 ## How taking stock works
 

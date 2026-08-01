@@ -7,6 +7,8 @@ var NOTIFY_EMAIL = "sam.pascoe@upuk-unipres.com";
 var PRODUCTS_SHEET = "Products";
 var REQUESTS_SHEET = "Requests";
 var STOCK_LOG_SHEET = "StockTaken";
+var REORDER_STATUS_SHEET = "ReorderStatus";
+var PROJECT_ORDERS_SHEET = "ProjectOrders";
 var TAKE_EMAIL_PROPERTY = "takeEmailEnabled";
 var SETTINGS_PASSCODE = "1234"; // change this to whatever you like
 
@@ -38,6 +40,12 @@ function doPost(e) {
   }
   if (action === "updateSettings") {
     return handleUpdateSettings(body);
+  }
+  if (action === "resolveReorder") {
+    return handleResolveReorder(body);
+  }
+  if (body.projectOrder) {
+    return handleProjectOrder(body);
   }
   return handleReorder(body);
 }
@@ -75,13 +83,75 @@ function handleReorder(body) {
   // "next row" and one submission would silently overwrite the other.
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
+  var timestamp = new Date();
   try {
-    appendRequests(requester, items);
+    appendRequests(requester, items, timestamp);
+    upsertReorderStatus(requester, items, timestamp);
   } finally {
     lock.releaseLock();
   }
 
   sendNotificationEmail(requester, items);
+
+  return jsonResponse({ ok: true, timestamp: timestamp.toISOString() });
+}
+
+function handleProjectOrder(body) {
+  var requester = (body.requester || "").toString().trim();
+  var projectName = (body.projectOrder && body.projectOrder.name || "").toString().trim();
+  var items = Array.isArray(body.items) ? body.items : [];
+
+  if (!requester || !projectName || items.length === 0) {
+    return jsonResponse({ ok: false, error: "requester, project name, and items are required" });
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PROJECT_ORDERS_SHEET);
+  if (!sheet) {
+    return jsonResponse({ ok: false, error: "ProjectOrders tab doesn't exist -- add it before using Project Orders" });
+  }
+
+  // Project orders are deliberately kept out of the stores reorder-status
+  // tracking (no upsertReorderStatus call here) -- ordering for a specific
+  // project isn't "reordering stores stock" and shouldn't flag/hide it.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    appendProjectOrder(requester, projectName, items);
+  } finally {
+    lock.releaseLock();
+  }
+
+  sendProjectOrderEmail(requester, projectName, items);
+
+  return jsonResponse({ ok: true });
+}
+
+function handleResolveReorder(body) {
+  var sku = (body.sku || "").toString().trim();
+  if (!sku) {
+    return jsonResponse({ ok: false, error: "sku is required" });
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REORDER_STATUS_SHEET);
+  if (!sheet) {
+    return jsonResponse({ ok: false, error: "ReorderStatus tab doesn't exist" });
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var rowIndex = findReorderStatusRow(sheet, sku);
+    if (rowIndex >= 0) {
+      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+        .map(function (h) { return h.toString().trim().toLowerCase(); });
+      var resolvedCol = headers.indexOf("resolved");
+      if (resolvedCol >= 0) {
+        sheet.getRange(rowIndex + 1, resolvedCol + 1).setValue(true);
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
 
   return jsonResponse({ ok: true });
 }
@@ -122,6 +192,7 @@ function readProducts() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PRODUCTS_SHEET);
   var values = sheet.getDataRange().getValues();
   var headers = values[0].map(function (h) { return h.toString().trim().toLowerCase(); });
+  var reorderStatusMap = getReorderStatusMap();
 
   var col = {
     sku: headers.indexOf("sku"),
@@ -145,8 +216,9 @@ function readProducts() {
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     if (!row[col.sku]) continue;
+    var sku = row[col.sku].toString();
     products.push({
-      sku: row[col.sku].toString(),
+      sku: sku,
       description: col.description >= 0 ? row[col.description].toString() : "",
       category: col.category >= 0 ? row[col.category].toString() : "",
       subcategory: col.subcategory >= 0 ? row[col.subcategory].toString() : "",
@@ -161,6 +233,7 @@ function readProducts() {
       maxLevel: col.maxLevel >= 0 ? row[col.maxLevel] : "",
       unit: col.unit >= 0 ? row[col.unit].toString() : "",
       imageFilename: col.imageFilename >= 0 ? row[col.imageFilename].toString() : "",
+      lastReorder: reorderStatusMap[sku] || null,
     });
   }
   return products;
@@ -201,13 +274,91 @@ function readRecentTransactions() {
   return rows.slice(0, LIMIT);
 }
 
-function appendRequests(requester, items) {
+function appendRequests(requester, items, timestamp) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REQUESTS_SHEET);
-  var timestamp = new Date();
   var rows = items.map(function (item) {
     return [timestamp, requester, item.sku, item.qty, item.description || ""];
   });
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+}
+
+function getReorderStatusMap() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REORDER_STATUS_SHEET);
+  if (!sheet) return {};
+
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return {};
+  var headers = values[0].map(function (h) { return h.toString().trim().toLowerCase(); });
+  var col = {
+    sku: headers.indexOf("sku"),
+    requester: headers.indexOf("requester"),
+    timestamp: headers.indexOf("timestamp"),
+    resolved: headers.indexOf("resolved"),
+  };
+  if (col.sku < 0) return {};
+
+  var map = {};
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    if (!row[col.sku]) continue;
+    var ts = col.timestamp >= 0 ? row[col.timestamp] : "";
+    map[row[col.sku].toString()] = {
+      requester: col.requester >= 0 ? row[col.requester].toString() : "",
+      timestamp: ts instanceof Date ? ts.toISOString() : ts.toString(),
+      resolved: col.resolved >= 0 ? !!row[col.resolved] : false,
+    };
+  }
+  return map;
+}
+
+function findReorderStatusRow(sheet, sku) {
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function (h) { return h.toString().trim().toLowerCase(); });
+  var skuCol = headers.indexOf("sku");
+  if (skuCol < 0) return -1;
+
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][skuCol].toString() === sku) return i;
+  }
+  return -1;
+}
+
+function upsertReorderStatus(requester, items, timestamp) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(REORDER_STATUS_SHEET);
+  if (!sheet) return; // optional tab -- skip tracking if it hasn't been created
+
+  var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+    .map(function (h) { return h.toString().trim().toLowerCase(); });
+  var skuCol = headers.indexOf("sku");
+  var requesterCol = headers.indexOf("requester");
+  var timestampCol = headers.indexOf("timestamp");
+  var resolvedCol = headers.indexOf("resolved");
+  if (skuCol < 0) return;
+
+  items.forEach(function (item) {
+    var rowIndex = findReorderStatusRow(sheet, item.sku);
+    if (rowIndex >= 0) {
+      if (requesterCol >= 0) sheet.getRange(rowIndex + 1, requesterCol + 1).setValue(requester);
+      if (timestampCol >= 0) sheet.getRange(rowIndex + 1, timestampCol + 1).setValue(timestamp);
+      if (resolvedCol >= 0) sheet.getRange(rowIndex + 1, resolvedCol + 1).setValue(false);
+    } else {
+      var row = [];
+      row[skuCol] = item.sku;
+      if (requesterCol >= 0) row[requesterCol] = requester;
+      if (timestampCol >= 0) row[timestampCol] = timestamp;
+      if (resolvedCol >= 0) row[resolvedCol] = false;
+      sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    }
+  });
+}
+
+function appendProjectOrder(requester, projectName, items) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PROJECT_ORDERS_SHEET);
+  var timestamp = new Date();
+  var rows = items.map(function (item) {
+    return [timestamp, requester, projectName, item.sku, item.description || "", item.qty];
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 6).setValues(rows);
 }
 
 function deductStock(sku, qty) {
@@ -247,6 +398,20 @@ function sendNotificationEmail(requester, items) {
   var subject = "Stock reorder request from " + requester;
   var body =
     requester + " submitted a reorder request:\n\n" +
+    lines.join("\n") +
+    "\n\nSubmitted: " + new Date().toLocaleString();
+
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
+}
+
+function sendProjectOrderEmail(requester, projectName, items) {
+  var lines = items.map(function (item) {
+    return "  - " + item.description + "  x" + item.qty;
+  });
+
+  var subject = "Project order (" + projectName + ") from " + requester;
+  var body =
+    requester + " submitted a PROJECT ORDER for \"" + projectName + "\" -- not a stores restock:\n\n" +
     lines.join("\n") +
     "\n\nSubmitted: " + new Date().toLocaleString();
 

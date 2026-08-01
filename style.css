@@ -381,6 +381,37 @@ body {
   border-color: var(--accent);
 }
 
+.reorder-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: color-mix(in srgb, var(--danger) 12%, var(--card-bg));
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.resolve-btn {
+  border: none;
+  border-radius: 6px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.resolve-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .cart-bar {
   position: fixed;
   left: 0;
@@ -457,6 +488,33 @@ body {
   gap: 8px;
   font-size: 0.9rem;
   color: var(--text);
+}
+
+#projectNameField {
+  margin: 8px 0 16px;
+}
+
+.duplicate-warning {
+  background: color-mix(in srgb, var(--danger) 12%, var(--card-bg));
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.duplicate-warning p {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.duplicate-hint {
+  display: block;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .confirm-list {
