@@ -635,8 +635,13 @@ function renderConfirmList() {
   for (const [sku, selectedQty] of state.pending.entries()) {
     const product = state.products.find((p) => p.sku === sku);
     const qty = computeOrderQty(product, selectedQty, mode);
+    const atMaxHint = mode === "max" && qty === 0 ? '<span class="at-max-hint">(at Max Level)</span>' : "";
+
     const li = document.createElement("li");
-    li.innerHTML = `<span>${escapeHtml(product ? product.description : sku)}</span><strong>${qty}</strong>`;
+    li.innerHTML = `
+      <span>${escapeHtml(product ? product.description : sku)}${atMaxHint}</span>
+      <input type="number" class="confirm-qty-input" data-sku="${escapeAttr(sku)}" value="${qty}" min="0">
+    `;
     els.confirmList.appendChild(li);
   }
 }
@@ -647,15 +652,28 @@ function closeConfirm() {
 
 async function submitOrder() {
   const requester = els.requester.value.trim();
-  const mode = getOrderMode();
-  const items = Array.from(state.pending.entries()).map(([sku, selectedQty]) => {
-    const product = state.products.find((p) => p.sku === sku);
-    return {
-      sku,
-      qty: computeOrderQty(product, selectedQty, mode),
-      description: product ? product.description : sku,
-    };
-  });
+
+  // Read the confirm screen's inputs directly rather than recomputing, since
+  // anyone can override the suggested quantity (e.g. a 0 "at Max Level" item
+  // still needed for a specific project). Zero/blank quantities are dropped --
+  // there's nothing for purchasing to action on a "reorder 0" line.
+  const items = Array.from(document.querySelectorAll(".confirm-qty-input"))
+    .map((input) => {
+      const sku = input.dataset.sku;
+      const product = state.products.find((p) => p.sku === sku);
+      return {
+        sku,
+        qty: Math.max(0, Math.floor(Number(input.value) || 0)),
+        description: product ? product.description : sku,
+      };
+    })
+    .filter((item) => item.qty > 0);
+
+  if (items.length === 0) {
+    showToast("Nothing to order -- all quantities are 0.");
+    return;
+  }
+
   const payload = { requester, items };
 
   els.confirmSubmitBtn.disabled = true;

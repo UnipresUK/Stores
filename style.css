@@ -467,10 +467,31 @@ body {
 
 .confirm-list li {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
+}
+
+.at-max-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: 6px;
+}
+
+.confirm-qty-input {
+  width: 60px;
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .confirm-actions {
