@@ -467,14 +467,8 @@ body {
     <div style="font-size:40px;margin-bottom:12px">👋</div>
     <h3 style="margin-bottom:6px">Welcome to Unipres Stores</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Select your name to continue.</p>
-    <div class="name-grid">
-      <button class="name-chip" onclick="selectName('Sam Pascoe')">Sam Pascoe</button>
-      <button class="name-chip" onclick="selectName('Rob Reay')">Rob Reay</button>
-      <button class="name-chip" onclick="selectName('Jordan Howe')">Jordan Howe</button>
-      <button class="name-chip" onclick="selectName('Megan Gorman')">Megan Gorman</button>
-      <button class="name-chip" onclick="selectName('Tim Belsey')">Tim Belsey</button>
-      <button class="name-chip" onclick="selectName('Daniel Hall')">Daniel Hall</button>
-      <button class="name-chip name-chip-other" onclick="showNameInput()">Other…</button>
+    <div class="name-grid" id="name-grid">
+      <!-- populated by buildNameGrid() -->
     </div>
     <div id="gate-other-wrap" style="display:none;margin-top:14px;text-align:left">
       <div class="m-field">
@@ -535,9 +529,27 @@ let currentUser  = '';
 const PASSCODE   = '3110';
 
 // ── Name gate ────────────────────────────────────────────────────────────────
-function showNameGate() {
+const FALLBACK_NAMES = ['Sam Pascoe','Rob Reay','Jordan Howe','Megan Gorman','Tim Belsey','Daniel Hall'];
+
+async function showNameGate() {
   document.getElementById('gate-other-wrap').style.display = 'none';
   document.getElementById('name-modal').classList.add('open');
+  // Load names from sheet, fall back to hardcoded list
+  let names = FALLBACK_NAMES;
+  try {
+    const res  = await fetch(`${API_URL}?action=users`);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length) names = data;
+  } catch (_) {}
+  buildNameGrid(names);
+}
+
+function buildNameGrid(names) {
+  const grid = document.getElementById('name-grid');
+  grid.innerHTML = names.map(n =>
+    `<button class="name-chip" onclick="selectName(${JSON.stringify(n)})">${esc(n)}</button>`
+  ).join('') +
+  `<button class="name-chip name-chip-other" onclick="showNameInput()">Other…</button>`;
 }
 
 function selectName(name) {
@@ -552,9 +564,11 @@ function showNameInput() {
   setTimeout(() => document.getElementById('gate-name').focus(), 80);
 }
 
-function confirmGateName() {
+async function confirmGateName() {
   const name = document.getElementById('gate-name').value.trim();
   if (!name) { document.getElementById('gate-name').style.borderColor = 'var(--red)'; return; }
+  // Save to sheet in background — don't block the user
+  apiFetch('POST', { action: 'addUser', name }).catch(() => {});
   selectName(name);
 }
 

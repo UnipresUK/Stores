@@ -8,6 +8,7 @@ var NOTIFY_EMAIL        = "sam.pascoe@upuk-unipres.com";
 var PRODUCTS_SHEET      = "Products";
 var REQUESTS_SHEET      = "Requests";
 var STOCK_LOG_SHEET     = "StockTaken";
+var USERS_SHEET         = "Users";
 var TAKE_EMAIL_PROPERTY = "takeEmailEnabled";
 var SETTINGS_PASSCODE   = "3110";
 
@@ -16,6 +17,10 @@ function doGet(e) {
 
   if (action === "transactions") {
     return jsonResponse(readRecentTransactions());
+  }
+
+  if (action === "users") {
+    return jsonResponse(readUsers());
   }
 
   if (action === "settings") {
@@ -41,8 +46,49 @@ function doPost(e) {
   if (body.action) action = body.action;
 
   if (action === "take")           return handleTakeStock(body);
+  if (action === "addUser")        return handleAddUser(body);
   if (action === "updateSettings") return handleUpdateSettings(body);
   return handleReorder(body);
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+function readUsers() {
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(USERS_SHEET);
+  if (!sheet) return [];
+
+  var values = sheet.getDataRange().getValues();
+  var names  = [];
+  for (var i = 1; i < values.length; i++) {
+    var name = (values[i][0] || "").toString().trim();
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function handleAddUser(body) {
+  var name = (body.name || "").toString().trim();
+  if (!name) return jsonResponse({ ok: false, error: "name is required" });
+
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(USERS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(USERS_SHEET);
+    sheet.appendRow(["Name"]);
+    sheet.getRange(1, 1).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+
+  // Check it doesn't already exist (case-insensitive)
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    if ((values[i][0] || "").toString().trim().toLowerCase() === name.toLowerCase()) {
+      return jsonResponse({ ok: true, added: false });
+    }
+  }
+
+  sheet.appendRow([name]);
+  return jsonResponse({ ok: true, added: true });
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
