@@ -165,8 +165,8 @@ body {
 }
 .btn-take:hover { background: #bbf7d0; }
 .btn-take:disabled { opacity: .35; cursor: not-allowed; }
-.btn-req { background: var(--accent); color: white; }
-.btn-req:hover { background: #3d6ee0; }
+.btn-req { background: #fee2e2; color: var(--red); border: 1px solid #fecaca; }
+.btn-req:hover { background: #fecaca; }
 
 /* ── Basket FAB ── */
 .basket-fab {
@@ -326,6 +326,22 @@ body {
   font-size: 13px; font-weight: 600; cursor: pointer;
 }
 
+/* ── Toggle switch ── */
+.toggle-wrap { position: relative; cursor: pointer; }
+.toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+  display: block; width: 44px; height: 24px; border-radius: 12px;
+  background: var(--border); transition: background .2s;
+}
+.toggle-wrap input:checked + .toggle-track { background: var(--accent); }
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: white; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform .2s;
+}
+.toggle-wrap input:checked + .toggle-track .toggle-thumb { transform: translateX(20px); }
+
 /* ── Toast ── */
 .toast {
   position: fixed; bottom: 82px; left: 50%; z-index: 9999;
@@ -365,6 +381,7 @@ body {
       <input type="text" id="search" class="search-input" placeholder="Search products…" oninput="renderGrid()">
     </div>
     <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle grid size">&#8859;</button>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
   </div>
   <div class="chip-bar" id="chip-bar"></div>
 </header>
@@ -428,6 +445,56 @@ body {
   </div>
 </div>
 
+<!-- Name gate modal -->
+<div class="modal-back" id="name-modal" style="background:rgba(0,0,0,.55)">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">👋</div>
+    <h3 style="margin-bottom:6px">Welcome to Unipres Stores</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Please enter your name before browsing.<br>This is used to log all stock activity.</p>
+    <div class="m-field" style="text-align:left">
+      <label>Your Name</label>
+      <input type="text" id="gate-name" placeholder="Enter your name…" autocomplete="name">
+    </div>
+    <button class="btn-confirm" style="width:100%;margin-top:8px" onclick="confirmGateName()">Continue</button>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-back" id="settings-modal">
+  <div class="modal" style="max-width:380px">
+    <h3>Settings</h3>
+    <div id="settings-passcode-screen">
+      <p style="font-size:13px;color:var(--muted);margin:8px 0 16px">Enter the settings passcode to continue.</p>
+      <div class="m-field">
+        <label>Passcode</label>
+        <input type="password" id="settings-passcode-input" placeholder="Enter passcode…">
+      </div>
+      <p id="settings-passcode-error" style="font-size:12px;color:var(--red);margin-top:6px;display:none">Incorrect passcode.</p>
+      <div class="modal-btns" style="margin-top:16px">
+        <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+        <button class="btn-confirm" onclick="checkPasscode()">Unlock</button>
+      </div>
+    </div>
+    <div id="settings-panel" style="display:none">
+      <p style="font-size:13px;color:var(--muted);margin:8px 0 20px">Toggle notifications for stock activity.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:14px;font-weight:600">Take stock emails</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Email sam when someone takes a product</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="take-email-toggle" onchange="saveTakeEmailSetting()">
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+      </div>
+      <div id="settings-save-msg" style="font-size:12px;color:var(--green);margin-top:10px;display:none">Saved ✓</div>
+      <div class="modal-btns" style="margin-top:20px">
+        <button class="btn-confirm" style="flex:1" onclick="closeSettings()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -437,6 +504,67 @@ let basket   = {};
 let activeCategory = '';
 let compact  = window.matchMedia('(max-width:520px)').matches;
 let takePending = null;
+let currentUser  = '';
+const PASSCODE   = '3110';
+
+// ── Name gate ────────────────────────────────────────────────────────────────
+function showNameGate() {
+  const modal = document.getElementById('name-modal');
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('gate-name').focus(), 100);
+}
+
+function confirmGateName() {
+  const name = document.getElementById('gate-name').value.trim();
+  if (!name) { document.getElementById('gate-name').style.borderColor = 'var(--red)'; return; }
+  currentUser = name;
+  localStorage.setItem('last_user', name);
+  document.getElementById('name-modal').classList.remove('open');
+  loadProducts();
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-passcode-screen').style.display = 'block';
+  document.getElementById('settings-panel').style.display = 'none';
+  document.getElementById('settings-passcode-input').value = '';
+  document.getElementById('settings-passcode-error').style.display = 'none';
+  document.getElementById('settings-modal').classList.add('open');
+  setTimeout(() => document.getElementById('settings-passcode-input').focus(), 100);
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+async function checkPasscode() {
+  const entered = document.getElementById('settings-passcode-input').value.trim();
+  if (entered !== PASSCODE) {
+    document.getElementById('settings-passcode-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('settings-passcode-screen').style.display = 'none';
+  document.getElementById('settings-panel').style.display = 'block';
+  document.getElementById('settings-save-msg').style.display = 'none';
+  // Load current setting from server
+  try {
+    const res  = await fetch(`${API_URL}?action=settings&passcode=${PASSCODE}`);
+    const data = await res.json();
+    if (data.ok) document.getElementById('take-email-toggle').checked = data.takeEmailEnabled;
+  } catch (_) {}
+}
+
+async function saveTakeEmailSetting() {
+  const enabled = document.getElementById('take-email-toggle').checked;
+  try {
+    const res  = await apiFetch('POST', { action: 'updateSettings', passcode: PASSCODE, takeEmailEnabled: enabled });
+    if (res.ok) {
+      const msg = document.getElementById('settings-save-msg');
+      msg.style.display = 'block';
+      setTimeout(() => { msg.style.display = 'none'; }, 2000);
+    }
+  } catch (_) {}
+}
 
 // ── Init ────────────────────────────────────────────────────────────────────
 async function init() {
@@ -446,7 +574,7 @@ async function init() {
     return;
   }
   renderSkeleton();
-  await loadProducts();
+  showNameGate();
 }
 
 function saveUrl() {
@@ -579,7 +707,7 @@ function openTake(sku) {
   takePending = p;
   document.getElementById('take-sub').textContent = p.description;
   document.getElementById('take-qty').value  = getCardQty(sku);
-  document.getElementById('take-name').value = localStorage.getItem('last_user') || '';
+  document.getElementById('take-name').value = currentUser;
   document.getElementById('take-modal').classList.add('open');
   setTimeout(() => document.getElementById('take-name').focus(), 80);
 }
@@ -772,15 +900,24 @@ function toast(msg, type = 'success') {
   _toast = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
-// ── Close take modal on backdrop click / Enter key ───────────────────────────
+// ── Keyboard / backdrop handlers ─────────────────────────────────────────────
 document.getElementById('take-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('take-modal')) closeTake();
+});
+document.getElementById('settings-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-modal')) closeSettings();
+});
+document.getElementById('gate-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmGateName();
 });
 document.getElementById('take-name').addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmTake();
 });
 document.getElementById('req-name').addEventListener('keydown', e => {
   if (e.key === 'Enter') submitRequest();
+});
+document.getElementById('settings-passcode-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPasscode();
 });
 
 init();

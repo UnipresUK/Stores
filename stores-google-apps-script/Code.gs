@@ -3,17 +3,28 @@
 // Deploy > New deployment > type "Web app" > Execute as "Me" > Who has access "Anyone".
 // Copy the resulting /exec URL into the API URL field in the app settings.
 
-var SPREADSHEET_ID   = "1hZaNIzuUfAuqBxcr616QffwvsJkxcfOKzTC7vqPv7Fo";
-var NOTIFY_EMAIL     = "sam.pascoe@upuk-unipres.com";
-var PRODUCTS_SHEET   = "Products";
-var REQUESTS_SHEET   = "Requests";
-var STOCK_LOG_SHEET  = "StockTaken";
+var SPREADSHEET_ID      = "1hZaNIzuUfAuqBxcr616QffwvsJkxcfOKzTC7vqPv7Fo";
+var NOTIFY_EMAIL        = "sam.pascoe@upuk-unipres.com";
+var PRODUCTS_SHEET      = "Products";
+var REQUESTS_SHEET      = "Requests";
+var STOCK_LOG_SHEET     = "StockTaken";
+var TAKE_EMAIL_PROPERTY = "takeEmailEnabled";
+var SETTINGS_PASSCODE   = "3110";
 
 function doGet(e) {
   var action = (e.parameter && e.parameter.action) || "products";
+
   if (action === "transactions") {
     return jsonResponse(readRecentTransactions());
   }
+
+  if (action === "settings") {
+    if ((e.parameter.passcode || "") !== SETTINGS_PASSCODE) {
+      return jsonResponse({ ok: false, error: "Invalid passcode" });
+    }
+    return jsonResponse({ ok: true, takeEmailEnabled: isTakeEmailEnabled() });
+  }
+
   return jsonResponse(readProducts());
 }
 
@@ -29,12 +40,30 @@ function doPost(e) {
   // action can also be in the body when sent via fetch with text/plain
   if (body.action) action = body.action;
 
-  if (action === "take") {
-    return handleTakeStock(body);
-  }
+  if (action === "take")           return handleTakeStock(body);
+  if (action === "updateSettings") return handleUpdateSettings(body);
   return handleReorder(body);
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────────
+function isTakeEmailEnabled() {
+  var stored = PropertiesService.getScriptProperties().getProperty(TAKE_EMAIL_PROPERTY);
+  return stored === null ? true : stored === "true";
+}
+
+function setTakeEmailEnabled(enabled) {
+  PropertiesService.getScriptProperties().setProperty(TAKE_EMAIL_PROPERTY, String(enabled));
+}
+
+function handleUpdateSettings(body) {
+  if ((body.passcode || "") !== SETTINGS_PASSCODE) {
+    return jsonResponse({ ok: false, error: "Invalid passcode" });
+  }
+  setTakeEmailEnabled(!!body.takeEmailEnabled);
+  return jsonResponse({ ok: true, takeEmailEnabled: isTakeEmailEnabled() });
+}
+
+// ── Reorder request ───────────────────────────────────────────────────────────
 function handleReorder(body) {
   var requester = (body.requester || "").toString().trim();
   var items = Array.isArray(body.items) ? body.items : [];
@@ -55,6 +84,7 @@ function handleReorder(body) {
   return jsonResponse({ ok: true });
 }
 
+// ── Take stock ────────────────────────────────────────────────────────────────
 function handleTakeStock(body) {
   var requester   = (body.requester   || "").toString().trim();
   var sku         = (body.sku         || "").toString().trim();
@@ -77,31 +107,36 @@ function handleTakeStock(body) {
   }
 
   appendStockLog(requester, sku, description, qty, newStock);
+
+  if (isTakeEmailEnabled()) {
+    sendTakeNotificationEmail(requester, description, qty, newStock);
+  }
+
   return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
 }
 
+// ── Read products ─────────────────────────────────────────────────────────────
 function readProducts() {
   var sheet  = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(PRODUCTS_SHEET);
   var values = sheet.getDataRange().getValues();
   var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
 
   var col = {
-    description:    headers.indexOf("description"),
-    sku:            headers.indexOf("sku"),
-    location:       headers.indexOf("location"),
-    currentStock:   headers.indexOf("current stock"),
-    minLevel:       headers.indexOf("min level"),
-    maxLevel:       headers.indexOf("max level"),
-    oem:            headers.indexOf("oem"),
-    partNumber:     headers.indexOf("part number"),
-    supplierLink:   headers.indexOf("supplier link"),
-    cost:           headers.indexOf("cost"),
-    quotation:      headers.indexOf("quotation"),
-    category:       headers.indexOf("category"),
-    subcategory:    headers.indexOf("subcategory"),
-    imageFilename:  headers.indexOf("image filename"),
-    // "Supplier Datasheet" column in the sheet
-    datasheetLink:  headers.indexOf("supplier datasheet"),
+    description:   headers.indexOf("description"),
+    sku:           headers.indexOf("sku"),
+    location:      headers.indexOf("location"),
+    currentStock:  headers.indexOf("current stock"),
+    minLevel:      headers.indexOf("min level"),
+    maxLevel:      headers.indexOf("max level"),
+    oem:           headers.indexOf("oem"),
+    partNumber:    headers.indexOf("part number"),
+    supplierLink:  headers.indexOf("supplier link"),
+    cost:          headers.indexOf("cost"),
+    quotation:     headers.indexOf("quotation"),
+    category:      headers.indexOf("category"),
+    subcategory:   headers.indexOf("subcategory"),
+    imageFilename: headers.indexOf("image filename"),
+    datasheetLink: headers.indexOf("supplier datasheet"),
   };
 
   var products = [];
@@ -131,6 +166,7 @@ function readProducts() {
   return products;
 }
 
+// ── Read transactions ─────────────────────────────────────────────────────────
 function readRecentTransactions() {
   var LIMIT = 50;
   var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(STOCK_LOG_SHEET);
@@ -166,6 +202,7 @@ function readRecentTransactions() {
   return rows.slice(0, LIMIT);
 }
 
+// ── Sheet helpers ─────────────────────────────────────────────────────────────
 function appendRequests(requester, items) {
   var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(REQUESTS_SHEET);
@@ -217,6 +254,7 @@ function appendStockLog(requester, sku, description, qty, newStock) {
   sheet.appendRow([new Date(), requester, sku, qty, newStock, description]);
 }
 
+// ── Emails ────────────────────────────────────────────────────────────────────
 function sendNotificationEmail(requester, items) {
   var lines = items.map(function(item) {
     return "  - " + item.description + "  x" + item.qty;
@@ -226,6 +264,15 @@ function sendNotificationEmail(requester, items) {
     requester + " submitted a stock request:\n\n" +
     lines.join("\n") +
     "\n\nSubmitted: " + new Date().toLocaleString();
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
+}
+
+function sendTakeNotificationEmail(requester, description, qty, newStock) {
+  var subject = requester + " took stock: " + description;
+  var body =
+    requester + " took " + qty + " x " + description + ".\n" +
+    "New stock level: " + newStock + "\n\n" +
+    "Taken: " + new Date().toLocaleString();
   MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
 }
 
