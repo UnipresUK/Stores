@@ -3,570 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Unipres — Stores Management</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<title>Unipres Stores</title>
 <style>
 :root {
-  --bg:       #0a0d12;
-  --surface:  #131720;
-  --surface2: #1a2030;
-  --border:   #242e42;
-  --text:     #e2e8f0;
-  --muted:    #64748b;
-  --dim:      #94a3b8;
-  --accent:   #3b82f6;
-  --green:    #10b981;
-  --amber:    #f59e0b;
-  --red:      #ef4444;
-  --purple:   #8b5cf6;
+  --bg:     #0d0f18;
+  --card:   #141824;
+  --card2:  #1c2235;
+  --border: #252e45;
+  --text:   #e6eaf6;
+  --muted:  #58637e;
+  --dim:    #8892ab;
+  --accent: #4f7ef8;
+  --green:  #22c55e;
+  --amber:  #f59e0b;
+  --red:    #f43f5e;
+  --r:      10px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-/* ── Nav ── */
-.site-nav {
-  background: #0d1017; border-bottom: 1px solid #1e2a3a;
-  padding: 0 20px; display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
-  position: sticky; top: 0; z-index: 100;
-}
-.nav-brand {
-  font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
-  color: var(--accent); padding: 12px 14px 12px 0; margin-right: 8px;
-  border-right: 1px solid #1e2a3a; white-space: nowrap;
-}
-.site-nav a {
-  text-decoration: none; color: var(--muted); font-size: 12px;
-  padding: 12px 12px; border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap; cursor: pointer;
-}
-.site-nav a:hover { color: var(--text); }
-.site-nav a.active { color: var(--text); border-bottom-color: var(--accent); }
-.nav-alert {
-  margin-left: auto; background: var(--red); color: white;
-  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
-  display: none; cursor: pointer;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh;
 }
 
-/* ── Layout ── */
-.view { display: none; padding: 24px 20px; max-width: 1400px; margin: 0 auto; }
-.view.active { display: block; }
-
-/* ── Cards ── */
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 20px;
+/* ── Header ── */
+.header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(13,15,24,.96);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
-.card-value { font-size: 32px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
-.card-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.card.red .card-value   { color: var(--red); }
-.card.amber .card-value { color: var(--amber); }
-.card.green .card-value { color: var(--green); }
-.card.blue .card-value  { color: var(--accent); }
+.header-top {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+}
+.brand {
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  color: var(--accent); white-space: nowrap; flex-shrink: 0;
+}
+.search-wrap { flex: 1; position: relative; }
+.search-input {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: inherit;
+  font-size: 14px; padding: 8px 12px 8px 34px; outline: none; transition: border .15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 14px; pointer-events: none;
+}
+.icon-btn {
+  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--dim); font-size: 18px; cursor: pointer; padding: 6px 10px;
+  transition: all .15s; line-height: 1; flex-shrink: 0;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--dim); }
+.icon-btn.active { color: var(--accent); border-color: var(--accent); }
 
-/* ── Section headers ── */
-.section-head {
+/* ── Chip bar ── */
+.chip-bar {
+  display: flex; gap: 7px; padding: 8px 16px 10px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.chip-bar::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0; padding: 5px 14px; border-radius: 20px; font-size: 12px;
+  font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+  background: var(--card2); color: var(--dim); transition: all .15s; white-space: nowrap;
+}
+.chip:hover { border-color: var(--dim); color: var(--text); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* ── Main / grid ── */
+.main { padding: 14px 16px 100px; max-width: 1400px; margin: 0 auto; }
+.grid-info {
+  font-size: 12px; color: var(--muted); margin-bottom: 12px;
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
 }
-.section-title { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; }
 
-/* ── Table ── */
-.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { background: var(--surface2); color: var(--muted); font-weight: 600; padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
-td { padding: 10px 14px; border-top: 1px solid var(--border); color: var(--text); }
-tr:hover td { background: var(--surface2); cursor: pointer; }
-.badge {
-  display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
-  border-radius: 4px; text-transform: uppercase; letter-spacing: .3px;
+.product-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
-.badge-red    { background: #450a0a; color: var(--red); }
-.badge-amber  { background: #451a03; color: var(--amber); }
-.badge-green  { background: #052e16; color: var(--green); }
-.badge-blue   { background: #172554; color: var(--accent); }
-.badge-purple { background: #2e1065; color: var(--purple); }
+.product-grid.compact {
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+}
+@media (max-width: 520px) {
+  .product-grid, .product-grid.compact {
+    grid-template-columns: repeat(2, 1fr); gap: 10px;
+  }
+}
 
-/* ── Search / toolbar ── */
-.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-input[type=text], input[type=number], input[type=email], select, textarea {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
-  color: var(--text); font-family: inherit; font-size: 13px; padding: 8px 12px;
-  outline: none; transition: border .15s;
+/* ── Product card ── */
+.product-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; display: flex;
+  flex-direction: column; transition: border-color .15s, transform .12s;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-input[type=text] { width: 260px; }
-select { cursor: pointer; }
+.product-card:hover { border-color: #364060; transform: translateY(-2px); }
+.product-card.oos { opacity: .6; }
 
-/* ── Buttons ── */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 6px; border: none; font-family: inherit;
-  font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; white-space: nowrap;
+.card-img-wrap {
+  width: 100%; aspect-ratio: 4/3; background: #161c2e;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.btn-primary { background: var(--accent); color: white; }
-.btn-primary:hover { background: #2563eb; }
-.btn-success { background: #065f46; color: var(--green); }
-.btn-success:hover { background: #047857; }
-.btn-danger  { background: #450a0a; color: var(--red); }
-.btn-danger:hover  { background: #7f1d1d; }
-.btn-ghost   { background: var(--surface2); color: var(--dim); border: 1px solid var(--border); }
-.btn-ghost:hover   { color: var(--text); border-color: var(--muted); }
-.btn-amber   { background: #451a03; color: var(--amber); }
-.btn-amber:hover   { background: #78350f; }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
+.card-img { width: 100%; height: 100%; object-fit: contain; padding: 8px; display: block; }
+.card-img-placeholder { font-size: 44px; color: var(--muted); }
+.product-grid.compact .card-img-placeholder { font-size: 32px; }
 
-/* ── Modal ── */
-.modal-backdrop {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
-  z-index: 200; align-items: center; justify-content: center; padding: 16px;
+.card-body { padding: 10px 12px 6px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.product-grid.compact .card-body { padding: 8px 10px 4px; gap: 4px; }
+
+.card-name {
+  font-size: 13px; font-weight: 600; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.modal-backdrop.open { display: flex; }
+.product-grid.compact .card-name { font-size: 12px; }
+
+.card-sku { font-size: 11px; color: var(--muted); font-family: monospace; }
+.product-grid.compact .card-sku { display: none; }
+
+.stock-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.stock-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+.s-ok  { background: #052e16; color: var(--green); }
+.s-low { background: #431407; color: var(--amber); }
+.s-out { background: #2d0a12; color: var(--red); }
+.unit  { font-size: 11px; color: var(--muted); }
+
+.qty-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: auto; padding-top: 8px;
+}
+.product-grid.compact .qty-row { padding-top: 5px; }
+.qty-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--card2); color: var(--text); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s; flex-shrink: 0;
+}
+.qty-btn:hover { background: var(--border); }
+.product-grid.compact .qty-btn { width: 24px; height: 24px; font-size: 14px; }
+.qty-num {
+  width: 30px; text-align: center; font-size: 14px;
+  font-weight: 600; font-family: monospace;
+}
+.product-grid.compact .qty-num { font-size: 13px; width: 26px; }
+
+.card-actions {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  padding: 6px 12px 12px;
+}
+.product-grid.compact .card-actions { padding: 4px 10px 10px; gap: 4px; }
+.card-btn {
+  padding: 8px 4px; border-radius: 6px; border: none; font-size: 12px;
+  font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.product-grid.compact .card-btn { padding: 6px 4px; font-size: 11px; }
+.btn-take {
+  background: #0d2818; color: var(--green); border: 1px solid #1a4030;
+}
+.btn-take:hover { background: #16391e; }
+.btn-take:disabled { opacity: .35; cursor: not-allowed; }
+.btn-req { background: var(--accent); color: white; }
+.btn-req:hover { background: #3d6ee0; }
+
+/* ── Basket FAB ── */
+.basket-fab {
+  position: fixed; bottom: 22px; right: 22px; z-index: 100;
+  background: var(--accent); color: white; border: none; border-radius: 50px;
+  padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 8px 28px rgba(79,126,248,.45);
+  display: flex; align-items: center; gap: 8px;
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+.basket-fab:hover { transform: scale(1.04); box-shadow: 0 12px 36px rgba(79,126,248,.55); }
+.basket-fab.hide { opacity: 0; pointer-events: none; transform: scale(.9); }
+.fab-badge {
+  background: white; color: var(--accent); border-radius: 50%;
+  width: 22px; height: 22px; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Basket panel ── */
+.overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 150;
+}
+.overlay.open { display: block; }
+
+.basket-panel {
+  position: fixed; top: 0; right: -440px; width: min(440px, 100%); height: 100%;
+  background: var(--card); border-left: 1px solid var(--border);
+  z-index: 200; display: flex; flex-direction: column;
+  transition: right .28s cubic-bezier(.4,0,.2,1);
+}
+.basket-panel.open { right: 0; }
+@media (max-width: 520px) {
+  .basket-panel {
+    top: auto; right: 0; bottom: -100%; width: 100%; height: 88vh;
+    border-left: none; border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    transition: bottom .28s cubic-bezier(.4,0,.2,1);
+  }
+  .basket-panel.open { bottom: 0; }
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--card); z-index: 1;
+}
+.panel-head h3 { font-size: 16px; font-weight: 700; }
+.panel-close {
+  background: none; border: none; color: var(--muted); font-size: 22px;
+  cursor: pointer; padding: 2px 8px; border-radius: 5px; line-height: 1;
+}
+.panel-close:hover { color: var(--text); background: var(--card2); }
+
+.basket-scroll { flex: 1; overflow-y: auto; padding: 10px 20px; }
+.basket-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.bi-img {
+  width: 56px; height: 56px; object-fit: contain; border-radius: 7px;
+  background: var(--card2); padding: 4px; flex-shrink: 0;
+}
+.bi-img-ph {
+  width: 56px; height: 56px; border-radius: 7px; background: var(--card2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.bi-info { flex: 1; min-width: 0; }
+.bi-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bi-sku  { font-size: 11px; color: var(--muted); font-family: monospace; margin-top: 2px; }
+.bi-qty  { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.bi-remove {
+  background: none; border: none; color: var(--muted); font-size: 20px;
+  cursor: pointer; padding: 4px 6px; line-height: 1; border-radius: 4px; flex-shrink: 0;
+}
+.bi-remove:hover { color: var(--red); background: #2d0a12; }
+
+.basket-empty {
+  text-align: center; padding: 52px 20px; color: var(--muted);
+}
+.basket-empty .icon { font-size: 52px; margin-bottom: 14px; }
+
+.panel-foot {
+  padding: 16px 20px; border-top: 1px solid var(--border); background: var(--card);
+}
+.foot-field { margin-bottom: 12px; }
+.foot-field label {
+  display: block; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px;
+}
+.foot-field input {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: inherit;
+  font-size: 14px; padding: 10px 12px; outline: none; transition: border .15s;
+}
+.foot-field input:focus { border-color: var(--accent); }
+.btn-submit {
+  width: 100%; padding: 12px; background: var(--accent); color: white;
+  border: none; border-radius: 8px; font-family: inherit; font-size: 15px;
+  font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.btn-submit:hover { background: #3d6ee0; }
+.btn-submit:disabled { background: var(--muted); cursor: not-allowed; }
+
+/* ── Take modal ── */
+.modal-back {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72);
+  z-index: 300; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-back.open { display: flex; }
 .modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; width: 100%; max-width: 380px; padding: 26px;
 }
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px; border-bottom: 1px solid var(--border);
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+.modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.4; }
+.m-field { margin-bottom: 13px; }
+.m-field label {
+  display: block; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px;
 }
-.modal-header h3 { font-size: 16px; font-weight: 600; }
-.modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
-.modal-close:hover { color: var(--text); }
-.modal-body { padding: 24px; }
-.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
-
-/* ── Form grid ── */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.form-grid.wide { grid-template-columns: 1fr; }
-.field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .4px; }
-.field input, .field select, .field textarea { width: 100%; }
-.field textarea { min-height: 64px; resize: vertical; }
-.field.span2 { grid-column: span 2; }
-@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .field.span2 { grid-column: span 1; } }
-
-/* ── Scan view ── */
-.scan-wrap {
-  max-width: 480px; margin: 0 auto;
+.m-field input {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: inherit;
+  font-size: 14px; padding: 10px 12px; outline: none; transition: border .15s;
 }
-#qr-reader { border-radius: 10px; overflow: hidden; border: 2px solid var(--border); background: #000; }
-#qr-reader video { width: 100% !important; border-radius: 8px; }
-.scan-result {
-  margin-top: 20px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 20px; display: none;
+.m-field input:focus { border-color: var(--accent); }
+.modal-btns { display: flex; gap: 8px; margin-top: 20px; }
+.btn-cancel {
+  flex: 1; padding: 10px; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--dim); font-family: inherit; font-size: 14px;
+  font-weight: 500; cursor: pointer; transition: all .15s;
 }
-.scan-result.visible { display: block; }
-.scan-part-name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-.scan-part-sub  { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-.qty-display { font-size: 48px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; text-align: center; padding: 16px 0; }
-.qty-display.low { color: var(--red); }
-.adjust-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
-.adjust-row input[type=number] { width: 80px; text-align: center; font-size: 16px; padding: 10px; }
-.scan-actions { display: flex; gap: 10px; }
-.scan-actions .btn { flex: 1; justify-content: center; }
-
-/* ── Labels ── */
-.label-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
-.label-card {
-  background: white; border: 1px solid #e5e7eb; border-radius: 6px;
-  padding: 12px; text-align: center; page-break-inside: avoid;
+.btn-cancel:hover { color: var(--text); border-color: var(--dim); }
+.btn-confirm {
+  flex: 2; padding: 10px; background: var(--green); border: none;
+  border-radius: 8px; color: white; font-family: inherit; font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: background .15s;
 }
-.label-card canvas { display: block; margin: 0 auto 8px; }
-.label-pn { font-size: 11px; font-weight: 700; color: #111; font-family: monospace; }
-.label-desc { font-size: 10px; color: #555; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
-.label-loc { font-size: 9px; color: #888; margin-top: 2px; }
-@media print {
-  .site-nav, .toolbar, .btn, .section-head { display: none !important; }
-  body { background: white; }
-  .view { padding: 0; }
-  .label-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-  .label-card { border: 1px solid #ccc; }
-}
-
-/* ── Import ── */
-.import-step {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  padding: 20px; margin-bottom: 16px;
-}
-.import-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
-.col-map-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 12px; }
-.col-map-row .arrow { color: var(--muted); text-align: center; }
-.col-map-row select { width: 100%; }
-
-/* ── Settings ── */
-.settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
-.settings-section h4 { font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 14px; }
-.settings-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; }
-.settings-row label { font-size: 13px; color: var(--dim); }
-.settings-row input, .settings-row select { width: 100%; }
-.toggle { display: flex; align-items: center; gap: 8px; }
-.toggle input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+.btn-confirm:hover { background: #16a34a; }
+.btn-confirm:disabled { background: var(--muted); cursor: not-allowed; }
 
 /* ── Setup banner ── */
 .setup-banner {
-  background: #172554; border: 1px solid #1d4ed8; border-radius: 10px;
-  padding: 20px 24px; margin-bottom: 24px; display: none;
+  margin: 16px; background: #172554; border: 1px solid #1d4ed8;
+  border-radius: 12px; padding: 20px 24px;
 }
-.setup-banner h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--accent); }
-.setup-banner p { font-size: 13px; color: var(--dim); line-height: 1.6; }
-.setup-banner ol { font-size: 13px; color: var(--dim); line-height: 1.8; padding-left: 20px; margin-top: 8px; }
-.setup-banner code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 3px; }
+.setup-banner h3 { font-size: 15px; font-weight: 700; color: #93c5fd; margin-bottom: 8px; }
+.setup-banner p  { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 10px; }
+.setup-banner input {
+  width: 100%; background: #1e3a8a; border: 1px solid #3b82f6;
+  border-radius: 8px; color: white; font-size: 13px; padding: 9px 12px;
+  outline: none; font-family: monospace; margin-bottom: 8px;
+}
+.setup-banner button {
+  padding: 8px 20px; background: #3b82f6; border: none;
+  border-radius: 7px; color: white; font-family: inherit;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
 
-/* ── Sortable column headers ── */
-th.sortable { cursor: pointer; user-select: none; }
-th.sortable:hover { color: var(--text); }
-th.sort-asc::after  { content: ' ▲'; font-size: 9px; color: var(--accent); }
-th.sort-desc::after { content: ' ▼'; font-size: 9px; color: var(--accent); }
-
-/* ── Misc ── */
-.empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
-.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+/* ── Toast ── */
 .toast {
-  position: fixed; bottom: 24px; right: 24px; z-index: 999;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  padding: 12px 18px; font-size: 13px; display: none; max-width: 320px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  position: fixed; bottom: 82px; left: 50%; z-index: 9999;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 18px; font-size: 13px;
+  opacity: 0; pointer-events: none; transition: all .2s; white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
 }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.success { border-color: var(--green); color: var(--green); }
 .toast.error   { border-color: var(--red);   color: var(--red); }
-.toast.show    { display: block; }
-.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: white; border-radius: 50%; animation: spin .6s linear infinite; }
+
+/* ── Skeleton ── */
+.skel {
+  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 5px;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block; width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,.25); border-top-color: white;
+  border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav class="site-nav">
-  <div class="nav-brand">UNIPRES / STORES</div>
-  <a onclick="showView('dashboard')" id="nav-dashboard" class="active">Dashboard</a>
-  <a onclick="showView('inventory')" id="nav-inventory">Inventory</a>
-  <a onclick="showView('scan')"      id="nav-scan">Scan</a>
-  <a onclick="showView('labels')"    id="nav-labels">Labels</a>
-  <a onclick="showView('import')"    id="nav-import">Import</a>
-  <a onclick="showView('settings')"  id="nav-settings">Settings</a>
-  <span class="nav-alert" id="low-stock-badge" onclick="showView('dashboard')"></span>
-</nav>
-
-<!-- ═══════════════════ DASHBOARD ═══════════════════ -->
-<div class="view active" id="view-dashboard">
-  <div class="setup-banner" id="setup-banner">
-    <h3>⚙ First-time setup required</h3>
-    <p>To get started, you need to deploy the Google Apps Script backend and paste the URL here.</p>
-    <ol>
-      <li>Go to <a href="https://script.google.com" target="_blank" style="color:var(--accent)">script.google.com</a> → New project</li>
-      <li>Paste the contents of <code>stores-google-apps-script/Code.gs</code> into the editor</li>
-      <li>Replace <code>YOUR_SPREADSHEET_ID_HERE</code> with your Google Sheet ID</li>
-      <li>Click <strong>Deploy → New deployment → Web app</strong> → Execute as <em>Me</em> → Anyone can access → Deploy</li>
-      <li>Copy the web app URL and paste it in <strong>Settings → API URL</strong></li>
-      <li>In Settings, click <strong>Run Setup</strong> to create the required sheets</li>
-    </ol>
-  </div>
-
-  <div class="cards" id="dash-cards">
-    <div class="card blue">
-      <div class="card-value" id="d-total">—</div>
-      <div class="card-label">Total Parts</div>
+<header class="header">
+  <div class="header-top">
+    <div class="brand">UNIPRES / STORES</div>
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="search" class="search-input" placeholder="Search products…" oninput="renderGrid()">
     </div>
-    <div class="card red">
-      <div class="card-value" id="d-low">—</div>
-      <div class="card-label">Low / Out of Stock</div>
-    </div>
-    <div class="card amber">
-      <div class="card-value" id="d-value">—</div>
-      <div class="card-label">Inventory Value (£)</div>
-    </div>
-    <div class="card green">
-      <div class="card-value" id="d-txn">—</div>
-      <div class="card-label">Transactions (30d)</div>
-    </div>
+    <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle grid size">&#8859;</button>
   </div>
+  <div class="chip-bar" id="chip-bar"></div>
+</header>
 
-  <div class="section-head">
-    <span class="section-title">Low Stock Alerts</span>
-    <button class="btn btn-ghost btn-sm" onclick="refresh()">↻ Refresh</button>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Part Number</th><th>Description</th><th>OEM</th>
-          <th>Qty</th><th>Reorder At</th><th>Supplier</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="low-stock-table">
-        <tr><td colspan="7" class="empty-state">Loading…</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="setup-banner" id="setup-banner" style="display:none">
+  <h3>&#9881; Connect to Google Sheet</h3>
+  <p>Paste your deployed Google Apps Script URL below. Deploy the <code>Code.gs</code> file as a Web App (Execute as Me, Anyone can access) and paste the <code>/exec</code> URL here.</p>
+  <input type="text" id="api-input" placeholder="https://script.google.com/macros/s/…/exec">
+  <button onclick="saveUrl()">Connect</button>
+</div>
 
-  <div class="section-head" style="margin-top:24px;">
-    <span class="section-title">Recent Transactions</span>
+<main class="main">
+  <div class="grid-info">
+    <span id="grid-count"></span>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Time</th><th>Part</th><th>Type</th><th>Qty</th><th>User</th><th>Notes</th></tr></thead>
-      <tbody id="recent-txn-table"><tr><td colspan="6" class="empty-state">Loading…</td></tr></tbody>
-    </table>
+  <div class="product-grid" id="product-grid"></div>
+</main>
+
+<!-- Basket FAB -->
+<button class="basket-fab hide" id="basket-fab" onclick="openBasket()">
+  &#128722;
+  <span class="fab-badge" id="fab-badge">0</span>
+</button>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay" onclick="closeBasket()"></div>
+
+<!-- Basket panel -->
+<div class="basket-panel" id="basket-panel">
+  <div class="panel-head">
+    <h3>Request List</h3>
+    <button class="panel-close" onclick="closeBasket()">&#215;</button>
+  </div>
+  <div class="basket-scroll" id="basket-scroll"></div>
+  <div class="panel-foot" id="panel-foot" style="display:none">
+    <div class="foot-field">
+      <label>Your Name</label>
+      <input type="text" id="req-name" placeholder="Enter your name…">
+    </div>
+    <button class="btn-submit" id="submit-btn" onclick="submitRequest()">Submit Request</button>
   </div>
 </div>
 
-<!-- ═══════════════════ INVENTORY ═══════════════════ -->
-<div class="view" id="view-inventory">
-  <div class="section-head">
-    <div class="toolbar">
-      <input type="text" id="inv-search" placeholder="Search parts…" oninput="filterInventory()">
-      <select id="inv-filter-heading"  onchange="filterInventory()"><option value="">All categories</option></select>
-      <select id="inv-filter-oem"      onchange="filterInventory()"><option value="">All manufacturers</option></select>
-      <select id="inv-filter-location" onchange="filterInventory()"><option value="">All locations</option></select>
-      <select id="inv-filter-stock" onchange="filterInventory()">
-        <option value="">All stock levels</option>
-        <option value="low">Low / Out of stock</option>
-        <option value="ok">OK</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" onclick="openPartModal(null)">+ Add Part</button>
-  </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th onclick="setSortField('partNumber')"  class="sortable" id="th-partNumber">Part No.</th>
-          <th onclick="setSortField('description')" class="sortable" id="th-description">Description</th>
-          <th onclick="setSortField('itemHeading')" class="sortable" id="th-itemHeading">Category</th>
-          <th onclick="setSortField('oem')"         class="sortable" id="th-oem">OEM</th>
-          <th onclick="setSortField('qty')"         class="sortable" id="th-qty">Qty</th>
-          <th onclick="setSortField('reorderPoint')"class="sortable" id="th-reorderPoint">Reorder</th>
-          <th onclick="setSortField('cost')"        class="sortable" id="th-cost">Cost</th>
-          <th onclick="setSortField('location')"    class="sortable" id="th-location">Location</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="inv-table"><tr><td colspan="9" class="empty-state">Loading…</td></tr></tbody>
-    </table>
-  </div>
-  <div id="inv-footer" style="font-size:12px;color:var(--muted);margin-top:10px;text-align:right;"></div>
-</div>
-
-<!-- ═══════════════════ SCAN ═══════════════════ -->
-<div class="view" id="view-scan">
-  <div class="scan-wrap">
-    <div class="section-head">
-      <span class="section-title">QR Code Scanner</span>
-      <button class="btn btn-ghost btn-sm" id="scan-toggle-btn" onclick="toggleScanner()">▶ Start Camera</button>
-    </div>
-    <div id="qr-reader"></div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">
-      Point camera at a shelf QR code, or <a onclick="manualLookup()" style="color:var(--accent);cursor:pointer;">enter part number manually</a>
-    </p>
-
-    <div class="scan-result" id="scan-result">
-      <div class="scan-part-name" id="scan-name"></div>
-      <div class="scan-part-sub" id="scan-sub"></div>
-      <div class="qty-display" id="scan-qty"></div>
-      <div class="adjust-row">
-        <label style="font-size:12px;color:var(--muted);width:60px;">Qty</label>
-        <input type="number" id="adj-qty" value="1" min="1" style="width:80px;">
-        <input type="text" id="adj-user" placeholder="Your name" style="flex:1;">
-      </div>
-      <div class="adjust-row">
-        <label style="font-size:12px;color:var(--muted);width:60px;">Notes</label>
-        <input type="text" id="adj-notes" placeholder="Optional notes" style="flex:1;">
-      </div>
-      <div class="scan-actions">
-        <button class="btn btn-success" onclick="doAdjust('add')">+ Add Stock</button>
-        <button class="btn btn-danger"  onclick="doAdjust('deduct')">− Deduct Stock</button>
-      </div>
-      <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;justify-content:center;" onclick="clearScan()">↩ Scan another</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════ LABELS ═══════════════════ -->
-<div class="view" id="view-labels">
-  <div class="section-head">
-    <div class="toolbar">
-      <input type="text" id="label-search" placeholder="Filter parts…" oninput="filterLabels()">
-      <select id="label-filter" onchange="filterLabels()"><option value="">All categories</option></select>
-      <span id="label-count" style="font-size:12px;color:var(--muted);"></span>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost" onclick="generateLabels()">⟳ Generate</button>
-      <button class="btn btn-primary" onclick="window.print()">🖨 Print Labels</button>
-    </div>
-  </div>
-  <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
-    Each label contains a QR code encoding the part ID. Use your browser's print function — labels are formatted for A4 / label sheets.
-  </p>
-  <div class="label-grid" id="label-grid">
-    <div class="empty-state">Click Generate to create labels for your inventory.</div>
-  </div>
-</div>
-
-<!-- ═══════════════════ IMPORT ═══════════════════ -->
-<div class="view" id="view-import">
-  <div class="import-step">
-    <h4>Step 1 — Source Google Sheet</h4>
-    <div class="field" style="max-width:480px;">
-      <label>Google Sheet ID</label>
-      <input type="text" id="import-sheet-id" placeholder="Paste your Sheet ID (from the URL)">
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:8px;">
-      Find it in the sheet URL: docs.google.com/spreadsheets/d/<strong style="color:var(--accent)">SHEET_ID</strong>/edit
-    </p>
-    <div class="field" style="max-width:240px;margin-top:12px;">
-      <label>Sheet / Tab name (optional)</label>
-      <input type="text" id="import-sheet-name" placeholder="Leave blank for first tab">
-    </div>
-  </div>
-
-  <div class="import-step">
-    <h4>Step 2 — Column Mapping</h4>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">
-      Your column names are pre-mapped below. Adjust if your headers differ.
-    </p>
-    <div id="col-map-container">
-      <!-- generated by buildColMapUI() -->
-    </div>
-  </div>
-
-  <div class="import-step" id="import-result-step" style="display:none;">
-    <h4>Import Result</h4>
-    <div id="import-result"></div>
-  </div>
-
-  <button class="btn btn-primary" onclick="runImport()" id="import-btn">Import Parts</button>
-  <p style="font-size:12px;color:var(--muted);margin-top:8px;">
-    Duplicate part numbers are skipped automatically. Existing inventory is not overwritten.
-  </p>
-</div>
-
-<!-- ═══════════════════ SETTINGS ═══════════════════ -->
-<div class="view" id="view-settings">
-  <div class="settings-section">
-    <h4>Connection</h4>
-    <div class="settings-row">
-      <label>Apps Script URL</label>
-      <input type="text" id="s-api-url" placeholder="https://script.google.com/macros/s/…/exec">
-    </div>
-    <button class="btn btn-primary btn-sm" onclick="saveApiUrl()">Save URL</button>
-    <button class="btn btn-ghost btn-sm" style="margin-left:8px;" onclick="runSetup()">Run Setup (first time)</button>
-    <button class="btn btn-ghost btn-sm" style="margin-left:8px;" onclick="testConnection()">Test Connection</button>
-  </div>
-
-  <div class="settings-section">
-    <h4>Company Details</h4>
-    <div class="settings-row"><label>Company Name</label><input type="text" id="s-company" placeholder="Unipres UK"></div>
-    <div class="settings-row"><label>From Name</label><input type="text" id="s-from" placeholder="Stores Department"></div>
-    <div class="settings-row"><label>Default Supplier Email</label><input type="email" id="s-def-email" placeholder="supplier@example.com"></div>
-  </div>
-
-  <div class="settings-section">
-    <h4>Stock & Reorder</h4>
-    <div class="settings-row">
-      <label>Default Reorder Point</label>
-      <input type="number" id="s-reorder-default" placeholder="5" style="width:100px;">
-    </div>
-    <div class="settings-row">
-      <label>Auto-send PO Email</label>
-      <div class="toggle">
-        <input type="checkbox" id="s-auto-po">
-        <span style="font-size:13px;color:var(--dim);">Send email automatically when stock hits reorder point</span>
-      </div>
-    </div>
-  </div>
-
-  <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-</div>
-
-<!-- ═══════════════════ PART MODAL ═══════════════════ -->
-<div class="modal-backdrop" id="part-modal">
+<!-- Take modal -->
+<div class="modal-back" id="take-modal">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="modal-title">Add Part</h3>
-      <button class="modal-close" onclick="closePartModal()">×</button>
+    <h3>Take Stock</h3>
+    <div class="modal-sub" id="take-sub"></div>
+    <div class="m-field">
+      <label>Quantity</label>
+      <input type="number" id="take-qty" min="1" value="1">
     </div>
-    <div class="modal-body">
-      <input type="hidden" id="m-id">
-      <div class="form-grid">
-        <div class="field"><label>Part Number</label><input type="text" id="m-partNumber"></div>
-        <div class="field"><label>Description</label><input type="text" id="m-description"></div>
-        <div class="field"><label>Category / Heading</label><input type="text" id="m-itemHeading"></div>
-        <div class="field"><label>OEM / Manufacturer</label><input type="text" id="m-oem"></div>
-        <div class="field"><label>Current Qty</label><input type="number" id="m-qty" min="0"></div>
-        <div class="field"><label>Qty Required</label><input type="number" id="m-qtyRequired" min="0"></div>
-        <div class="field"><label>Unit Cost (£)</label><input type="number" id="m-cost" step="0.01" min="0"></div>
-        <div class="field"><label>Reorder Point</label><input type="number" id="m-reorderPoint" min="0" placeholder="Alert below this qty"></div>
-        <div class="field"><label>Shelf Location</label><input type="text" id="m-location" placeholder="e.g. A3, Shelf 2"></div>
-        <div class="field"><label>CAD Reference</label><input type="text" id="m-cad"></div>
-        <div class="field span2"><label>Link / URL</label><input type="text" id="m-link"></div>
-        <div class="field"><label>3 Quotes Required?</label>
-          <select id="m-threeQuotesRequired">
-            <option value="">No</option><option value="Yes">Yes</option>
-          </select>
-        </div>
-        <div class="field"><label>Unipres PO</label><input type="text" id="m-unipressPO"></div>
-      </div>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px;">Supplier Contacts</p>
-        <div class="form-grid">
-          <div class="field"><label>Contact 1 Email</label><input type="text" id="m-contact1"></div>
-          <div class="field"><label>Quotation 1 (£)</label><input type="number" id="m-quotation1" step="0.01"></div>
-          <div class="field"><label>Contact 2 Email</label><input type="text" id="m-contact2"></div>
-          <div class="field"><label>Quotation 2 (£)</label><input type="number" id="m-quotation2" step="0.01"></div>
-          <div class="field"><label>Contact 3 Email</label><input type="text" id="m-contact3"></div>
-          <div class="field"><label>Quotation 3 (£)</label><input type="number" id="m-quotation3" step="0.01"></div>
-        </div>
-      </div>
+    <div class="m-field">
+      <label>Your Name</label>
+      <input type="text" id="take-name" placeholder="Enter your name…">
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger btn-sm" id="modal-delete-btn" onclick="deletePart()" style="margin-right:auto;display:none;">Delete Part</button>
-      <button class="btn btn-amber btn-sm" id="modal-po-btn" onclick="openPOModal()" style="display:none;">Send PO Email</button>
-      <button class="btn btn-ghost" onclick="closePartModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="savePart()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- PO Modal -->
-<div class="modal-backdrop" id="po-modal">
-  <div class="modal" style="max-width:440px;">
-    <div class="modal-header">
-      <h3>Send Purchase Order</h3>
-      <button class="modal-close" onclick="document.getElementById('po-modal').classList.remove('open')">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid wide">
-        <div class="field"><label>Supplier Email</label><input type="email" id="po-email"></div>
-        <div class="field"><label>Quantity to Order</label><input type="number" id="po-qty" min="1"></div>
-        <div class="field"><label>PO Number (optional)</label><input type="text" id="po-number"></div>
-        <div class="field"><label>Notes</label><textarea id="po-notes" placeholder="Any additional information…"></textarea></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('po-modal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" onclick="sendPO()">Send Email</button>
-    </div>
-  </div>
-</div>
-
-<!-- Manual lookup modal -->
-<div class="modal-backdrop" id="lookup-modal">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-header">
-      <h3>Manual Part Lookup</h3>
-      <button class="modal-close" onclick="document.getElementById('lookup-modal').classList.remove('open')">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label>Part Number or ID</label>
-        <input type="text" id="lookup-input" style="width:100%;" placeholder="Enter part number…" onkeydown="if(event.key==='Enter') doLookup()">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('lookup-modal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" onclick="doLookup()">Look Up</button>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeTake()">Cancel</button>
+      <button class="btn-confirm" id="take-confirm" onclick="confirmTake()">Confirm Take</button>
     </div>
   </div>
 </div>
@@ -574,601 +431,356 @@ th.sort-desc::after { content: ' ▼'; font-size: 9px; color: var(--accent); }
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── State ──────────────────────────────────────────────────────────────────
-let API_URL = localStorage.getItem('stores_api_url') || 'https://script.google.com/macros/s/AKfycbz2R8YF8ISkVX9XgZ1_Okf5JkY9DHS0k-J_pKIjEA2IXi34MLIASA4c7tucxZos_AjA/exec';
-let inventory = [];
-let transactions = [];
-let lowStock = [];
-let currentPart = null;
-let scanner = null;
-let scannerRunning = false;
-let sortField = '';
-let sortDir   = 'asc';
+let API_URL  = localStorage.getItem('stores_api_url') || '';
+let products = [];
+let basket   = {};
+let activeCategory = '';
+let compact  = window.matchMedia('(max-width:520px)').matches;
+let takePending = null;
 
-// ─── API ─────────────────────────────────────────────────────────────────────
-async function api(params) {
-  if (!API_URL) { toast('Set the API URL in Settings first.', 'error'); throw new Error('No API URL'); }
-  const url = new URL(API_URL);
-  Object.keys(params).forEach(k => url.searchParams.set(k, params[k]));
-  const res = await fetch(url.toString());
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'API error');
-  return json.data;
-}
-
-// ─── Init ────────────────────────────────────────────────────────────────────
+// ── Init ────────────────────────────────────────────────────────────────────
 async function init() {
-  document.getElementById('s-api-url').value = API_URL;
   if (!API_URL) {
     document.getElementById('setup-banner').style.display = 'block';
+    renderSkeleton();
     return;
   }
-  buildColMapUI();
-  await refresh();
-  await loadSettings();
+  renderSkeleton();
+  await loadProducts();
 }
 
-async function refresh() {
+function saveUrl() {
+  const v = document.getElementById('api-input').value.trim();
+  if (!v) return;
+  API_URL = v;
+  localStorage.setItem('stores_api_url', v);
+  document.getElementById('setup-banner').style.display = 'none';
+  loadProducts();
+}
+
+// ── Load data ────────────────────────────────────────────────────────────────
+async function loadProducts() {
   try {
-    const [rawInventory, rawTxns, rawLowStock] = await Promise.all([
-      api({ action: 'getInventory' }),
-      api({ action: 'getTransactions' }),
-      api({ action: 'getLowStock' })
-    ]);
-    inventory = rawInventory.filter(p => (p.description || '').trim() !== '');
-    transactions = rawTxns;
-    lowStock = rawLowStock.filter(p => (p.description || '').trim() !== '');
-    renderDashboard();
-    renderInventory();
-    renderLabelsDropdown();
-    updateLowStockBadge();
-  } catch (e) { toast('Load failed: ' + e.message, 'error'); }
-}
-
-// ─── Dashboard ───────────────────────────────────────────────────────────────
-function renderDashboard() {
-  document.getElementById('d-total').textContent = inventory.length;
-  document.getElementById('d-low').textContent   = lowStock.length;
-
-  const value = inventory.reduce((s, p) => {
-    const c = parseFloat(p.cost) || 0;
-    const q = parseInt(p.qty, 10) || 0;
-    return s + c * q;
-  }, 0);
-  document.getElementById('d-value').textContent = '£' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-  const thirty = Date.now() - 30*24*60*60*1000;
-  const recent = transactions.filter(t => new Date(t.timestamp).getTime() > thirty);
-  document.getElementById('d-txn').textContent = recent.length;
-
-  // Low stock table
-  const tbody = document.getElementById('low-stock-table');
-  if (!lowStock.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No low-stock items 🎉</td></tr>';
-  } else {
-    tbody.innerHTML = lowStock.map(p => {
-      const q   = parseInt(p.qty, 10) || 0;
-      const rp  = parseInt(p.reorderPoint, 10) || 0;
-      const cls = q === 0 ? 'badge-red' : 'badge-amber';
-      const lbl = q === 0 ? 'Out of Stock' : 'Low';
-      return `<tr onclick="openPartModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
-        <td><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;">${esc(p.partNumber)}</span></td>
-        <td>${esc(p.description)}</td>
-        <td>${esc(p.oem)}</td>
-        <td><strong style="color:var(--red)">${q}</strong></td>
-        <td>${rp}</td>
-        <td style="font-size:12px;">${esc(p.contact1)}</td>
-        <td><button class="btn btn-amber btn-sm" onclick="event.stopPropagation();quickPO('${p.id}')">Send PO</button></td>
-      </tr>`;
-    }).join('');
-  }
-
-  // Recent transactions
-  const rtbody = document.getElementById('recent-txn-table');
-  const rtxns = transactions.slice(0, 20);
-  if (!rtxns.length) {
-    rtbody.innerHTML = '<tr><td colspan="6" class="empty-state">No transactions yet</td></tr>';
-  } else {
-    rtbody.innerHTML = rtxns.map(t => {
-      const part = inventory.find(p => p.id === t.partId);
-      const name = part ? (part.partNumber || part.description) : t.partId;
-      const cls  = t.type === 'add' ? 'badge-green' : 'badge-red';
-      const sign = t.type === 'add' ? '+' : '−';
-      const ts   = new Date(t.timestamp).toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-      return `<tr>
-        <td style="font-size:11px;color:var(--muted);">${ts}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;">${esc(name)}</td>
-        <td><span class="badge ${cls}">${t.type}</span></td>
-        <td><strong>${sign}${t.quantity}</strong></td>
-        <td style="font-size:12px;">${esc(t.user)}</td>
-        <td style="font-size:12px;color:var(--muted);">${esc(t.notes)}</td>
-      </tr>`;
-    }).join('');
+    const res  = await fetch(API_URL + '?action=products');
+    const data = await res.json();
+    products = (Array.isArray(data) ? data : []).filter(p => (p.description || '').trim());
+    buildChips();
+    renderGrid();
+  } catch (e) {
+    document.getElementById('product-grid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:48px;margin-bottom:14px">⚠️</div><p>Could not load products. Check your API URL.</p></div>';
+    toast('Failed to load products', 'error');
   }
 }
 
-function updateLowStockBadge() {
-  const badge = document.getElementById('low-stock-badge');
-  if (lowStock.length > 0) {
-    badge.textContent = lowStock.length + ' low';
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
+// ── Categories ───────────────────────────────────────────────────────────────
+function buildChips() {
+  const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+  const bar  = document.getElementById('chip-bar');
+  bar.innerHTML = ['All', ...cats].map(c => {
+    const active = (c === 'All' && !activeCategory) || c === activeCategory;
+    return `<button class="chip${active ? ' active' : ''}" onclick="setCategory(${JSON.stringify(c)})">${esc(c)}</button>`;
+  }).join('');
 }
 
-// ─── Inventory ────────────────────────────────────────────────────────────────
-function renderInventory() {
-  const populate = (id, values, allLabel) => {
-    const el = document.getElementById(id);
-    const cur = el.value;
-    el.innerHTML = `<option value="">${allLabel}</option>` +
-      values.map(v => `<option ${v===cur?'selected':''} value="${esc(v)}">${esc(v)}</option>`).join('');
-  };
-  populate('inv-filter-heading',  [...new Set(inventory.map(p => p.itemHeading).filter(Boolean))].sort(), 'All categories');
-  populate('inv-filter-oem',      [...new Set(inventory.map(p => p.oem).filter(Boolean))].sort(),         'All manufacturers');
-  populate('inv-filter-location', [...new Set(inventory.map(p => p.location).filter(Boolean))].sort(),    'All locations');
-  filterInventory();
+function setCategory(c) {
+  activeCategory = c === 'All' ? '' : c;
+  buildChips();
+  renderGrid();
 }
 
-function setSortField(field) {
-  if (sortField === field) {
-    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortField = field;
-    sortDir   = 'asc';
-  }
-  // Update header indicators
-  document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc','sort-desc'));
-  const th = document.getElementById('th-' + field);
-  if (th) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
-  filterInventory();
+// ── Grid toggle ──────────────────────────────────────────────────────────────
+function toggleDensity() {
+  compact = !compact;
+  document.getElementById('product-grid').classList.toggle('compact', compact);
+  document.getElementById('density-btn').classList.toggle('active', compact);
 }
 
-function filterInventory() {
-  const q   = document.getElementById('inv-search').value.toLowerCase();
-  const cat = document.getElementById('inv-filter-heading').value;
-  const oem = document.getElementById('inv-filter-oem').value;
-  const loc = document.getElementById('inv-filter-location').value;
-  const stk = document.getElementById('inv-filter-stock').value;
-
-  let filtered = inventory.filter(p => {
-    if (q && !`${p.partNumber} ${p.description} ${p.oem} ${p.itemHeading} ${p.location}`.toLowerCase().includes(q)) return false;
-    if (cat && p.itemHeading !== cat) return false;
-    if (oem && p.oem !== oem) return false;
-    if (loc && p.location !== loc) return false;
-    if (stk === 'low') {
-      const rp = parseInt(p.reorderPoint, 10) || 0;
-      const qty = parseInt(p.qty, 10) || 0;
-      return rp > 0 && qty <= rp;
-    }
-    if (stk === 'ok') {
-      const rp = parseInt(p.reorderPoint, 10) || 0;
-      const qty = parseInt(p.qty, 10) || 0;
-      return rp === 0 || qty > rp;
-    }
+// ── Render grid ──────────────────────────────────────────────────────────────
+function renderGrid() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const filtered = products.filter(p => {
+    if (activeCategory && p.category !== activeCategory) return false;
+    if (q && !`${p.description} ${p.sku} ${p.category} ${p.oem} ${p.partNumber}`.toLowerCase().includes(q)) return false;
     return true;
   });
 
-  if (sortField) {
-    const numFields = new Set(['qty','reorderPoint','cost']);
-    filtered.sort((a, b) => {
-      let av = a[sortField] || '';
-      let bv = b[sortField] || '';
-      if (numFields.has(sortField)) {
-        av = parseFloat(av) || 0;
-        bv = parseFloat(bv) || 0;
-        return sortDir === 'asc' ? av - bv : bv - av;
-      }
-      av = String(av).toLowerCase();
-      bv = String(bv).toLowerCase();
-      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  document.getElementById('grid-count').textContent =
+    filtered.length + ' product' + (filtered.length !== 1 ? 's' : '');
+
+  const grid = document.getElementById('product-grid');
+  grid.classList.toggle('compact', compact);
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:48px;margin-bottom:14px">📦</div><p>No products found</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => cardHtml(p)).join('');
+}
+
+function cardHtml(p) {
+  const stock = Number(p.currentStock) || 0;
+  const min   = Number(p.minLevel)     || 0;
+  let badgeCls = 's-ok', badgeTxt = `${stock} in stock`;
+  if (stock === 0)              { badgeCls = 's-out'; badgeTxt = 'Out of stock'; }
+  else if (min && stock <= min) { badgeCls = 's-low'; badgeTxt = `Low — ${stock} left`; }
+
+  const imgUrl = (p.imageFilename || '').trim();
+  const imgHtml = imgUrl
+    ? `<img class="card-img" src="${esc(imgUrl)}" alt="" loading="lazy"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const phStyle = imgUrl ? 'style="display:none"' : '';
+  const placeholder = `<div class="card-img-placeholder" ${phStyle}>📦</div>`;
+
+  const skuAttr = esc(p.sku);
+  const disabled = stock === 0 ? ' disabled' : '';
+
+  return `<div class="product-card${stock === 0 ? ' oos' : ''}">
+    <div class="card-img-wrap">
+      ${imgHtml}
+      ${placeholder}
+    </div>
+    <div class="card-body">
+      <div class="card-name">${esc(p.description)}</div>
+      <div class="card-sku">${esc(p.sku)}${p.partNumber ? ' &middot; ' + esc(p.partNumber) : ''}</div>
+      <div class="stock-row">
+        <span class="stock-badge ${badgeCls}">${badgeTxt}</span>
+        ${p.unit ? `<span class="unit">/ ${esc(p.unit)}</span>` : ''}
+      </div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="cardQty('${skuAttr}',-1)">&#8722;</button>
+        <span class="qty-num" id="cq-${skuAttr}">1</span>
+        <button class="qty-btn" onclick="cardQty('${skuAttr}',1)">+</button>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="card-btn btn-take"${disabled} onclick="openTake('${skuAttr}')">Take</button>
+      <button class="card-btn btn-req" onclick="addToBasket('${skuAttr}')">+ Request</button>
+    </div>
+  </div>`;
+}
+
+// ── Card qty adjuster ────────────────────────────────────────────────────────
+function cardQty(sku, delta) {
+  const el = document.getElementById('cq-' + sku);
+  if (el) el.textContent = Math.max(1, (parseInt(el.textContent) || 1) + delta);
+}
+function getCardQty(sku) {
+  const el = document.getElementById('cq-' + sku);
+  return el ? Math.max(1, parseInt(el.textContent) || 1) : 1;
+}
+
+// ── Take stock ───────────────────────────────────────────────────────────────
+function openTake(sku) {
+  const p = products.find(x => x.sku === sku);
+  if (!p) return;
+  takePending = p;
+  document.getElementById('take-sub').textContent = p.description;
+  document.getElementById('take-qty').value  = getCardQty(sku);
+  document.getElementById('take-name').value = localStorage.getItem('last_user') || '';
+  document.getElementById('take-modal').classList.add('open');
+  setTimeout(() => document.getElementById('take-name').focus(), 80);
+}
+
+function closeTake() {
+  document.getElementById('take-modal').classList.remove('open');
+  takePending = null;
+}
+
+async function confirmTake() {
+  const qty  = parseInt(document.getElementById('take-qty').value, 10);
+  const name = document.getElementById('take-name').value.trim();
+  if (!qty  || qty  <= 0) { toast('Enter a valid quantity', 'error'); return; }
+  if (!name)              { toast('Enter your name',        'error'); return; }
+  if (!takePending)       return;
+
+  const product = takePending;
+  const btn = document.getElementById('take-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const res = await apiFetch('POST', {
+      action: 'take', sku: product.sku, qty,
+      requester: name, description: product.description
     });
-  }
+    if (!res.ok) throw new Error(res.error || 'Server error');
 
-  const tbody = document.getElementById('inv-table');
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No parts found</td></tr>';
-  } else {
-    tbody.innerHTML = filtered.map(p => {
-      const qty = parseInt(p.qty, 10) || 0;
-      const rp  = parseInt(p.reorderPoint, 10) || 0;
-      let status = '<span class="badge badge-green">OK</span>';
-      if (rp > 0 && qty === 0) status = '<span class="badge badge-red">Out</span>';
-      else if (rp > 0 && qty <= rp) status = '<span class="badge badge-amber">Low</span>';
-      const cost = p.cost ? '£' + parseFloat(p.cost).toFixed(2) : '';
-      return `<tr onclick="openPartModal(${JSON.stringify(p).replace(/"/g, '&quot;')})">
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;">${esc(p.partNumber)}</td>
-        <td>${esc(p.description)}</td>
-        <td style="font-size:12px;color:var(--muted);">${esc(p.itemHeading)}</td>
-        <td style="font-size:12px;">${esc(p.oem)}</td>
-        <td><strong ${qty===0?'style="color:var(--red)"':rp>0&&qty<=rp?'style="color:var(--amber)"':''}>${qty}</strong></td>
-        <td style="font-size:12px;color:var(--muted);">${rp||'—'}</td>
-        <td style="font-size:12px;">${cost}</td>
-        <td style="font-size:12px;color:var(--muted);">${esc(p.location)}</td>
-        <td>${status}</td>
-      </tr>`;
-    }).join('');
-  }
-  document.getElementById('inv-footer').textContent = `Showing ${filtered.length} of ${inventory.length} parts`;
-}
+    localStorage.setItem('last_user', name);
+    const prod = products.find(x => x.sku === res.sku);
+    if (prod) prod.currentStock = res.currentStock;
 
-// ─── Part Modal ───────────────────────────────────────────────────────────────
-const MODAL_FIELDS = ['id','partNumber','description','itemHeading','oem','qty','qtyRequired',
-  'cost','reorderPoint','location','cad','link','threeQuotesRequired','unipressPO',
-  'contact1','contact2','contact3','quotation1','quotation2','quotation3'];
-
-function openPartModal(part) {
-  currentPart = part;
-  document.getElementById('modal-title').textContent = part ? 'Edit Part' : 'Add Part';
-  MODAL_FIELDS.forEach(f => {
-    const el = document.getElementById('m-' + f);
-    if (el) el.value = part ? (part[f] || '') : '';
-  });
-  document.getElementById('modal-delete-btn').style.display = part ? 'inline-flex' : 'none';
-  document.getElementById('modal-po-btn').style.display     = part ? 'inline-flex' : 'none';
-  document.getElementById('part-modal').classList.add('open');
-}
-
-function closePartModal() {
-  document.getElementById('part-modal').classList.remove('open');
-  currentPart = null;
-}
-
-async function savePart() {
-  const part = {};
-  MODAL_FIELDS.forEach(f => {
-    const el = document.getElementById('m-' + f);
-    if (el) part[f] = el.value.trim();
-  });
-  if (!part.description && !part.partNumber) { toast('Part number or description required', 'error'); return; }
-  try {
-    if (part.id) {
-      await api({ action: 'updatePart', row: JSON.stringify(part) });
-    } else {
-      delete part.id;
-      await api({ action: 'addPart', row: JSON.stringify(part) });
-    }
-    toast('Saved successfully', 'success');
-    closePartModal();
-    await refresh();
-  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
-}
-
-async function deletePart() {
-  if (!currentPart) return;
-  if (!confirm('Delete "' + (currentPart.partNumber || currentPart.description) + '"? This cannot be undone.')) return;
-  try {
-    await api({ action: 'deletePart', id: currentPart.id });
-    toast('Part deleted', 'success');
-    closePartModal();
-    await refresh();
-  } catch (e) { toast('Delete failed: ' + e.message, 'error'); }
-}
-
-// ─── PO Modal ─────────────────────────────────────────────────────────────────
-function openPOModal() {
-  if (!currentPart) return;
-  document.getElementById('po-email').value  = currentPart.contact1 || '';
-  document.getElementById('po-qty').value    = currentPart.qtyRequired || 1;
-  document.getElementById('po-number').value = '';
-  document.getElementById('po-notes').value  = '';
-  document.getElementById('po-modal').classList.add('open');
-}
-
-function quickPO(partId) {
-  currentPart = inventory.find(p => p.id === partId);
-  if (currentPart) openPOModal();
-}
-
-async function sendPO() {
-  if (!currentPart) return;
-  const params = {
-    action:   'sendPO',
-    partId:   currentPart.id,
-    toEmail:  document.getElementById('po-email').value.trim(),
-    qty:      document.getElementById('po-qty').value,
-    poNumber: document.getElementById('po-number').value.trim(),
-    notes:    document.getElementById('po-notes').value.trim()
-  };
-  if (!params.toEmail) { toast('Supplier email required', 'error'); return; }
-  try {
-    await api(params);
-    toast('PO email sent to ' + params.toEmail, 'success');
-    document.getElementById('po-modal').classList.remove('open');
-  } catch (e) { toast('Failed: ' + e.message, 'error'); }
-}
-
-// ─── QR Scanner ───────────────────────────────────────────────────────────────
-function toggleScanner() {
-  if (scannerRunning) stopScanner();
-  else startScanner();
-}
-
-function startScanner() {
-  if (scanner) { scanner.clear(); scanner = null; }
-  scanner = new Html5Qrcode('qr-reader');
-  scanner.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    onScanSuccess,
-    () => {}
-  ).then(() => {
-    scannerRunning = true;
-    document.getElementById('scan-toggle-btn').textContent = '⏹ Stop Camera';
-  }).catch(err => {
-    toast('Camera error: ' + err, 'error');
-  });
-}
-
-function stopScanner() {
-  if (scanner) {
-    scanner.stop().then(() => { scanner = null; scannerRunning = false; });
-    document.getElementById('scan-toggle-btn').textContent = '▶ Start Camera';
+    closeTake();
+    toast(`Taken ${qty} × ${product.description}`, 'success');
+    renderGrid();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirm Take';
   }
 }
 
-function onScanSuccess(decodedText) {
-  stopScanner();
-  loadScannedPart(decodedText.trim());
+// ── Basket ───────────────────────────────────────────────────────────────────
+function addToBasket(sku) {
+  const p   = products.find(x => x.sku === sku);
+  if (!p) return;
+  const qty = getCardQty(sku);
+  if (basket[sku]) basket[sku].qty += qty;
+  else             basket[sku] = { product: p, qty };
+  updateFAB();
+  toast(`Added ${qty} × ${p.description}`, 'success');
 }
 
-function manualLookup() {
-  document.getElementById('lookup-input').value = '';
-  document.getElementById('lookup-modal').classList.add('open');
-  setTimeout(() => document.getElementById('lookup-input').focus(), 100);
+function removeLine(sku) {
+  delete basket[sku];
+  updateFAB();
+  renderBasket();
 }
 
-function doLookup() {
-  const val = document.getElementById('lookup-input').value.trim();
-  document.getElementById('lookup-modal').classList.remove('open');
-  if (val) loadScannedPart(val);
-}
-
-function loadScannedPart(idOrPartNum) {
-  const part = inventory.find(p => p.id === idOrPartNum || String(p.partNumber) === idOrPartNum);
-  if (!part) {
-    toast('Part not found: ' + idOrPartNum, 'error');
-    return;
+function lineQty(sku, delta) {
+  if (basket[sku]) {
+    basket[sku].qty = Math.max(1, basket[sku].qty + delta);
+    renderBasket();
   }
-  showScanResult(part);
 }
 
-function showScanResult(part) {
-  currentPart = part;
-  const qty   = parseInt(part.qty, 10) || 0;
-  const rp    = parseInt(part.reorderPoint, 10) || 0;
-  document.getElementById('scan-name').textContent = part.partNumber || part.description;
-  document.getElementById('scan-sub').textContent  = [part.description, part.itemHeading, part.location].filter(Boolean).join(' · ');
-  document.getElementById('scan-qty').textContent  = qty;
-  document.getElementById('scan-qty').className    = 'qty-display' + (rp > 0 && qty <= rp ? ' low' : '');
-  document.getElementById('adj-qty').value         = 1;
-  document.getElementById('adj-user').value        = localStorage.getItem('last_user') || '';
-  document.getElementById('adj-notes').value       = '';
-  document.getElementById('scan-result').classList.add('visible');
+function updateFAB() {
+  const total = Object.values(basket).reduce((s, i) => s + i.qty, 0);
+  document.getElementById('fab-badge').textContent = total;
+  document.getElementById('basket-fab').classList.toggle('hide', total === 0);
 }
 
-async function doAdjust(type) {
-  if (!currentPart) return;
-  const qty   = parseInt(document.getElementById('adj-qty').value, 10);
-  const user  = document.getElementById('adj-user').value.trim();
-  const notes = document.getElementById('adj-notes').value.trim();
-  if (!qty || qty <= 0) { toast('Enter a valid quantity', 'error'); return; }
-  if (user) localStorage.setItem('last_user', user);
-  try {
-    const res = await api({ action:'adjustStock', partId:currentPart.id, type, quantity:qty, user, notes });
-    toast((type==='add'?'Added ':'Deducted ') + qty + ' — new stock: ' + res.newQty, 'success');
-    if (res.lowStock) setTimeout(() => toast('⚠ Stock is at or below reorder point!', 'error'), 1500);
-    // Update local state
-    currentPart.qty = res.newQty;
-    document.getElementById('scan-qty').textContent = res.newQty;
-    document.getElementById('scan-qty').className = 'qty-display' + (res.lowStock ? ' low' : '');
-    await refresh();
-  } catch (e) { toast('Error: ' + e.message, 'error'); }
+function openBasket() {
+  renderBasket();
+  document.getElementById('basket-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
 }
 
-function clearScan() {
-  document.getElementById('scan-result').classList.remove('visible');
-  currentPart = null;
-  startScanner();
+function closeBasket() {
+  document.getElementById('basket-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
 }
 
-// ─── Labels ───────────────────────────────────────────────────────────────────
-function renderLabelsDropdown() {
-  const headings = [...new Set(inventory.map(p => p.itemHeading).filter(Boolean))].sort();
-  const el = document.getElementById('label-filter');
-  const cur = el.value;
-  el.innerHTML = '<option value="">All categories</option>' + headings.map(h => `<option ${h===cur?'selected':''} value="${esc(h)}">${esc(h)}</option>`).join('');
-}
+function renderBasket() {
+  const lines = Object.values(basket);
+  const scroll = document.getElementById('basket-scroll');
+  const foot   = document.getElementById('panel-foot');
 
-function filterLabels() {
-  generateLabels();
-}
-
-function generateLabels() {
-  const q   = document.getElementById('label-search').value.toLowerCase();
-  const cat = document.getElementById('label-filter').value;
-
-  const filtered = inventory.filter(p => {
-    if (q && !`${p.partNumber} ${p.description}`.toLowerCase().includes(q)) return false;
-    if (cat && p.itemHeading !== cat) return false;
-    return true;
-  });
-
-  document.getElementById('label-count').textContent = filtered.length + ' labels';
-  const grid = document.getElementById('label-grid');
-
-  if (!filtered.length) {
-    grid.innerHTML = '<div class="empty-state">No parts match the filter.</div>';
+  if (!lines.length) {
+    scroll.innerHTML = '<div class="basket-empty"><div class="icon">🛒</div><p>Your request list is empty</p></div>';
+    foot.style.display = 'none';
     return;
   }
 
-  grid.innerHTML = filtered.map((p, i) => `<div class="label-card" id="label-${i}">
-    <canvas id="qr-${i}"></canvas>
-    <div class="label-pn">${esc(p.partNumber || p.id)}</div>
-    <div class="label-desc" title="${esc(p.description)}">${esc(p.description)}</div>
-    ${p.location ? `<div class="label-loc">📍 ${esc(p.location)}</div>` : ''}
-  </div>`).join('');
-
-  filtered.forEach((p, i) => {
-    QRCode.toCanvas(document.getElementById('qr-' + i), p.id, { width: 120, margin: 1, color: { dark: '#000', light: '#fff' } });
-  });
-}
-
-// ─── Import ───────────────────────────────────────────────────────────────────
-const YOUR_COLUMNS = [
-  'Item','Qty Required','Item Heading','Description','OEM',
-  '3 Quotes Required?','Part Number','Link','Qty','Cost',
-  'Quotation 1','Quotation 2','Quotation 3',
-  'Contact 1','Contact 2','Contact 3',
-  'Unipres PO','PO Copy','CAD'
-];
-const INV_FIELDS = [
-  '','item','qtyRequired','itemHeading','description','oem',
-  'threeQuotesRequired','partNumber','link','qty','cost',
-  'quotation1','quotation2','quotation3',
-  'contact1','contact2','contact3',
-  'unipressPO','poCopy','cad'
-];
-const DEFAULT_MAP = {
-  'Item':'item','Qty Required':'qtyRequired','Item Heading':'itemHeading',
-  'Description':'description','OEM':'oem','3 Quotes Required?':'threeQuotesRequired',
-  'Part Number':'partNumber','Link':'link','Qty':'qty','Cost':'cost',
-  'Quotation 1':'quotation1','Quotation 2':'quotation2','Quotation 3':'quotation3',
-  'Contact 1':'contact1','Contact 2':'contact2','Contact 3':'contact3',
-  'Unipres PO':'unipressPO','PO Copy':'poCopy','CAD':'cad'
-};
-const DEST_OPTIONS = ['(skip)','item','partNumber','description','itemHeading','oem','qty','qtyRequired',
-  'cost','threeQuotesRequired','link','quotation1','quotation2','quotation3',
-  'contact1','contact2','contact3','unipressPO','poCopy','cad','reorderPoint','location'];
-
-function buildColMapUI() {
-  const container = document.getElementById('col-map-container');
-  if (!container) return;
-  container.innerHTML = YOUR_COLUMNS.map(col => {
-    const mapped = DEFAULT_MAP[col] || '';
-    const opts = DEST_OPTIONS.map(o => `<option value="${o}" ${o===mapped?'selected':''}>${o||'(skip)'}</option>`).join('');
-    return `<div class="col-map-row">
-      <span style="color:var(--dim);">${col}</span>
-      <span class="arrow">→</span>
-      <select id="map-${col.replace(/[^a-z0-9]/gi,'_')}">${opts}</select>
+  foot.style.display = 'block';
+  scroll.innerHTML = lines.map(({ product: p, qty }) => {
+    const imgUrl = (p.imageFilename || '').trim();
+    const imgHtml = imgUrl
+      ? `<img class="bi-img" src="${esc(imgUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const ph = `<div class="bi-img-ph" ${imgUrl ? 'style="display:none"' : ''}>📦</div>`;
+    const s = esc(p.sku);
+    return `<div class="basket-item">
+      ${imgHtml}${ph}
+      <div class="bi-info">
+        <div class="bi-name">${esc(p.description)}</div>
+        <div class="bi-sku">${esc(p.sku)}</div>
+      </div>
+      <div class="bi-qty">
+        <button class="qty-btn" style="width:24px;height:24px;font-size:13px" onclick="lineQty('${s}',-1)">&#8722;</button>
+        <span class="qty-num" style="width:26px;font-size:13px">${qty}</span>
+        <button class="qty-btn" style="width:24px;height:24px;font-size:13px" onclick="lineQty('${s}',1)">+</button>
+      </div>
+      <button class="bi-remove" onclick="removeLine('${s}')">&#215;</button>
     </div>`;
   }).join('');
 }
 
-async function runImport() {
-  const sheetId   = document.getElementById('import-sheet-id').value.trim();
-  const sheetName = document.getElementById('import-sheet-name').value.trim();
-  if (!sheetId) { toast('Paste your Sheet ID first', 'error'); return; }
+async function submitRequest() {
+  const name  = document.getElementById('req-name').value.trim();
+  const lines = Object.values(basket);
+  if (!name)         { toast('Enter your name',              'error'); return; }
+  if (!lines.length) { toast('Add items to your list first', 'error'); return; }
 
-  const colMap = {};
-  YOUR_COLUMNS.forEach(col => {
-    const el = document.getElementById('map-' + col.replace(/[^a-z0-9]/gi,'_'));
-    if (el && el.value) colMap[col] = el.value;
-  });
-
-  const btn = document.getElementById('import-btn');
-  btn.innerHTML = '<span class="spinner"></span> Importing…';
-  btn.disabled  = true;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting…';
 
   try {
-    const res = await api({ action:'importFromSheet', sheetId, sheetName, columnMap:JSON.stringify(colMap) });
-    const step = document.getElementById('import-result-step');
-    step.style.display = 'block';
-    document.getElementById('import-result').innerHTML =
-      `<p style="color:var(--green);font-size:14px;margin-bottom:6px;">✓ Import complete</p>
-       <p style="font-size:13px;color:var(--dim);">Imported: <strong>${res.imported}</strong> parts &nbsp;·&nbsp; Skipped: <strong>${res.skipped}</strong> (duplicates or empty rows)</p>`;
-    toast('Imported ' + res.imported + ' parts', 'success');
-    await refresh();
+    const res = await apiFetch('POST', {
+      action: 'reorder',
+      requester: name,
+      items: lines.map(({ product: p, qty }) => ({ sku: p.sku, qty, description: p.description }))
+    });
+    if (!res.ok) throw new Error(res.error || 'Server error');
+
+    localStorage.setItem('last_user', name);
+    basket = {};
+    updateFAB();
+    closeBasket();
+    toast('Request submitted — email sent ✓', 'success');
   } catch (e) {
-    toast('Import failed: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
   } finally {
-    btn.innerHTML = 'Import Parts';
-    btn.disabled  = false;
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
   }
 }
 
-// ─── Settings ─────────────────────────────────────────────────────────────────
-async function loadSettings() {
-  try {
-    const s = await api({ action: 'getSettings' });
-    document.getElementById('s-company').value        = s.companyName || '';
-    document.getElementById('s-from').value           = s.fromName    || '';
-    document.getElementById('s-def-email').value      = s.defaultSupplierEmail || '';
-    document.getElementById('s-reorder-default').value= s.reorderDefault || '';
-    document.getElementById('s-auto-po').checked      = s.autoPO === 'true';
-  } catch (_) {}
+// ── API helper ───────────────────────────────────────────────────────────────
+async function apiFetch(method, body) {
+  const res = await fetch(API_URL, {
+    method,
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+    body:     JSON.stringify(body)
+  });
+  return res.json();
 }
 
-function saveApiUrl() {
-  const url = document.getElementById('s-api-url').value.trim();
-  if (!url) { toast('Paste the Apps Script URL', 'error'); return; }
-  API_URL = url;
-  localStorage.setItem('stores_api_url', url);
-  toast('URL saved — loading data…', 'success');
-  document.getElementById('setup-banner').style.display = 'none';
-  buildColMapUI();
-  refresh();
-  loadSettings();
+// ── Skeleton ─────────────────────────────────────────────────────────────────
+function renderSkeleton() {
+  document.getElementById('product-grid').innerHTML = Array(8).fill(0).map(() => `
+    <div class="product-card">
+      <div class="skel" style="aspect-ratio:4/3"></div>
+      <div class="card-body">
+        <div class="skel" style="height:14px;width:75%;margin-bottom:6px"></div>
+        <div class="skel" style="height:11px;width:45%;margin-bottom:6px"></div>
+        <div class="skel" style="height:20px;width:55%"></div>
+      </div>
+      <div class="card-actions">
+        <div class="skel" style="height:34px;border-radius:6px"></div>
+        <div class="skel" style="height:34px;border-radius:6px"></div>
+      </div>
+    </div>`).join('');
 }
 
-async function runSetup() {
-  if (!API_URL) { toast('Save the API URL first', 'error'); return; }
-  try {
-    await api({ action: 'setup' });
-    toast('Sheets created successfully', 'success');
-  } catch (e) { toast('Setup failed: ' + e.message, 'error'); }
-}
-
-async function testConnection() {
-  if (!API_URL) { toast('No API URL set', 'error'); return; }
-  try {
-    const data = await api({ action: 'getInventory' });
-    toast('Connected ✓ — ' + data.length + ' parts found', 'success');
-  } catch (e) { toast('Connection failed: ' + e.message, 'error'); }
-}
-
-async function saveSettings() {
-  const settings = {
-    companyName:         document.getElementById('s-company').value.trim(),
-    fromName:            document.getElementById('s-from').value.trim(),
-    defaultSupplierEmail:document.getElementById('s-def-email').value.trim(),
-    reorderDefault:      document.getElementById('s-reorder-default').value.trim(),
-    autoPO:              document.getElementById('s-auto-po').checked ? 'true' : 'false'
-  };
-  try {
-    await api({ action: 'updateSettings', settings: JSON.stringify(settings) });
-    toast('Settings saved', 'success');
-  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
-}
-
-// ─── Nav / Views ─────────────────────────────────────────────────────────────
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.site-nav a').forEach(a => a.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  document.getElementById('nav-' + name).classList.add('active');
-  if (name !== 'scan' && scannerRunning) stopScanner();
-  if (name === 'labels') generateLabels();
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-let toastTimer;
-function toast(msg, type='success') {
+let _toast;
+function toast(msg, type = 'success') {
   const el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = 'toast ' + type + ' show';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  el.className = `toast ${type} show`;
+  clearTimeout(_toast);
+  _toast = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
-// Close modals on backdrop click
-document.querySelectorAll('.modal-backdrop').forEach(bd => {
-  bd.addEventListener('click', e => { if (e.target === bd) bd.classList.remove('open'); });
+// ── Close take modal on backdrop click / Enter key ───────────────────────────
+document.getElementById('take-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('take-modal')) closeTake();
+});
+document.getElementById('take-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmTake();
+});
+document.getElementById('req-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitRequest();
 });
 
 init();
