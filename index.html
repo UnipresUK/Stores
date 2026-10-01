@@ -562,7 +562,7 @@ async function showNameGate() {
 function buildNameGrid(names) {
   const grid = document.getElementById('name-grid');
   grid.innerHTML = names.map(n =>
-    `<button class="name-chip" onclick="selectName(${JSON.stringify(n)})">${esc(n)}</button>`
+    `<button class="name-chip" onclick='selectName(${JSON.stringify(n)})'>${esc(n)}</button>`
   ).join('') +
   `<button class="name-chip name-chip-other" onclick="showNameInput()">Other…</button>`;
 }
