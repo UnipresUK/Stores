@@ -161,12 +161,12 @@ body {
 }
 .product-grid.compact .card-btn { padding: 6px 4px; font-size: 11px; }
 .btn-take {
-  background: #dcfce7; color: var(--green); border: 1px solid #bbf7d0;
+  background: #fee2e2; color: var(--red); border: 1px solid #fecaca;
 }
-.btn-take:hover { background: #bbf7d0; }
+.btn-take:hover { background: #fecaca; }
 .btn-take:disabled { opacity: .35; cursor: not-allowed; }
-.btn-req { background: #fee2e2; color: var(--red); border: 1px solid #fecaca; }
-.btn-req:hover { background: #fecaca; }
+.btn-req { background: #dcfce7; color: var(--green); border: 1px solid #bbf7d0; }
+.btn-req:hover { background: #bbf7d0; }
 
 /* ── Basket FAB ── */
 .basket-fab {
@@ -326,6 +326,22 @@ body {
   font-size: 13px; font-weight: 600; cursor: pointer;
 }
 
+/* ── Name grid ── */
+.name-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.name-chip {
+  padding: 12px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card2); color: var(--text); font-family: inherit;
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s;
+}
+.name-chip:hover { background: var(--accent); border-color: var(--accent); color: white; }
+.name-chip-other {
+  grid-column: span 2; background: var(--card2); color: var(--muted);
+  font-size: 13px;
+}
+.name-chip-other:hover { background: var(--card2); border-color: var(--dim); color: var(--text); }
+
 /* ── Toggle switch ── */
 .toggle-wrap { position: relative; cursor: pointer; }
 .toggle-wrap input { opacity: 0; width: 0; height: 0; position: absolute; }
@@ -447,15 +463,26 @@ body {
 
 <!-- Name gate modal -->
 <div class="modal-back" id="name-modal" style="background:rgba(0,0,0,.55)">
-  <div class="modal" style="max-width:360px;text-align:center">
+  <div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:40px;margin-bottom:12px">👋</div>
     <h3 style="margin-bottom:6px">Welcome to Unipres Stores</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Please enter your name before browsing.<br>This is used to log all stock activity.</p>
-    <div class="m-field" style="text-align:left">
-      <label>Your Name</label>
-      <input type="text" id="gate-name" placeholder="Enter your name…" autocomplete="name">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Select your name to continue.</p>
+    <div class="name-grid">
+      <button class="name-chip" onclick="selectName('Sam Pascoe')">Sam Pascoe</button>
+      <button class="name-chip" onclick="selectName('Rob Reay')">Rob Reay</button>
+      <button class="name-chip" onclick="selectName('Jordan Howe')">Jordan Howe</button>
+      <button class="name-chip" onclick="selectName('Megan Gorman')">Megan Gorman</button>
+      <button class="name-chip" onclick="selectName('Tim Belsey')">Tim Belsey</button>
+      <button class="name-chip" onclick="selectName('Daniel Hall')">Daniel Hall</button>
+      <button class="name-chip name-chip-other" onclick="showNameInput()">Other…</button>
     </div>
-    <button class="btn-confirm" style="width:100%;margin-top:8px" onclick="confirmGateName()">Continue</button>
+    <div id="gate-other-wrap" style="display:none;margin-top:14px;text-align:left">
+      <div class="m-field">
+        <label>Your Name</label>
+        <input type="text" id="gate-name" placeholder="Type your name…" autocomplete="name">
+      </div>
+      <button class="btn-confirm" style="width:100%;margin-top:4px" onclick="confirmGateName()">Continue</button>
+    </div>
   </div>
 </div>
 
@@ -509,18 +536,26 @@ const PASSCODE   = '3110';
 
 // ── Name gate ────────────────────────────────────────────────────────────────
 function showNameGate() {
-  const modal = document.getElementById('name-modal');
-  modal.classList.add('open');
-  setTimeout(() => document.getElementById('gate-name').focus(), 100);
+  document.getElementById('gate-other-wrap').style.display = 'none';
+  document.getElementById('name-modal').classList.add('open');
+}
+
+function selectName(name) {
+  currentUser = name;
+  localStorage.setItem('last_user', name);
+  document.getElementById('name-modal').classList.remove('open');
+  loadProducts();
+}
+
+function showNameInput() {
+  document.getElementById('gate-other-wrap').style.display = 'block';
+  setTimeout(() => document.getElementById('gate-name').focus(), 80);
 }
 
 function confirmGateName() {
   const name = document.getElementById('gate-name').value.trim();
   if (!name) { document.getElementById('gate-name').style.borderColor = 'var(--red)'; return; }
-  currentUser = name;
-  localStorage.setItem('last_user', name);
-  document.getElementById('name-modal').classList.remove('open');
-  loadProducts();
+  selectName(name);
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
