@@ -6,17 +6,17 @@
 <title>Unipres Stores</title>
 <style>
 :root {
-  --bg:     #0d0f18;
-  --card:   #141824;
-  --card2:  #1c2235;
-  --border: #252e45;
-  --text:   #e6eaf6;
-  --muted:  #58637e;
-  --dim:    #8892ab;
+  --bg:     #f4f6f9;
+  --card:   #ffffff;
+  --card2:  #f0f2f6;
+  --border: #dde1ea;
+  --text:   #1a2035;
+  --muted:  #8a93a8;
+  --dim:    #4a5368;
   --accent: #4f7ef8;
-  --green:  #22c55e;
-  --amber:  #f59e0b;
-  --red:    #f43f5e;
+  --green:  #16a34a;
+  --amber:  #d97706;
+  --red:    #dc2626;
   --r:      10px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +28,7 @@ body {
 /* ── Header ── */
 .header {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(13,15,24,.96);
+  background: rgba(255,255,255,.96);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
@@ -99,11 +99,11 @@ body {
   border-radius: var(--r); overflow: hidden; display: flex;
   flex-direction: column; transition: border-color .15s, transform .12s;
 }
-.product-card:hover { border-color: #364060; transform: translateY(-2px); }
+.product-card:hover { border-color: #b0b8cc; transform: translateY(-2px); }
 .product-card.oos { opacity: .6; }
 
 .card-img-wrap {
-  width: 100%; aspect-ratio: 4/3; background: #161c2e;
+  width: 100%; aspect-ratio: 4/3; background: #f0f2f6;
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .card-img { width: 100%; height: 100%; object-fit: contain; padding: 8px; display: block; }
@@ -126,9 +126,9 @@ body {
 .stock-badge {
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
 }
-.s-ok  { background: #052e16; color: var(--green); }
-.s-low { background: #431407; color: var(--amber); }
-.s-out { background: #2d0a12; color: var(--red); }
+.s-ok  { background: #dcfce7; color: var(--green); }
+.s-low { background: #fef3c7; color: var(--amber); }
+.s-out { background: #fee2e2; color: var(--red); }
 .unit  { font-size: 11px; color: var(--muted); }
 
 .qty-row {
@@ -161,9 +161,9 @@ body {
 }
 .product-grid.compact .card-btn { padding: 6px 4px; font-size: 11px; }
 .btn-take {
-  background: #0d2818; color: var(--green); border: 1px solid #1a4030;
+  background: #dcfce7; color: var(--green); border: 1px solid #bbf7d0;
 }
-.btn-take:hover { background: #16391e; }
+.btn-take:hover { background: #bbf7d0; }
 .btn-take:disabled { opacity: .35; cursor: not-allowed; }
 .btn-req { background: var(--accent); color: white; }
 .btn-req:hover { background: #3d6ee0; }
@@ -241,7 +241,7 @@ body {
   background: none; border: none; color: var(--muted); font-size: 20px;
   cursor: pointer; padding: 4px 6px; line-height: 1; border-radius: 4px; flex-shrink: 0;
 }
-.bi-remove:hover { color: var(--red); background: #2d0a12; }
+.bi-remove:hover { color: var(--red); background: #fee2e2; }
 
 .basket-empty {
   text-align: center; padding: 52px 20px; color: var(--muted);
@@ -341,7 +341,7 @@ body {
 
 /* ── Skeleton ── */
 .skel {
-  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  background: linear-gradient(90deg, #e8eaf0 25%, #f0f2f6 50%, #e8eaf0 75%);
   background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 5px;
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
