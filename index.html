@@ -83,15 +83,39 @@ body {
   display: grid; gap: 14px;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
+
+/* ── List / compact mode ── */
 .product-grid.compact {
-  gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  grid-template-columns: 1fr;
+  gap: 5px;
 }
-@media (max-width: 520px) {
-  .product-grid, .product-grid.compact {
-    grid-template-columns: repeat(2, 1fr); gap: 10px;
-  }
+.product-grid.compact .product-card {
+  flex-direction: row;
+  align-items: stretch;
 }
+.product-grid.compact .card-img-wrap {
+  width: 72px; min-width: 72px; aspect-ratio: 1/1;
+  flex-shrink: 0; border-radius: var(--r) 0 0 var(--r);
+}
+.product-grid.compact .card-img { padding: 6px; }
+.product-grid.compact .card-img-placeholder { font-size: 22px; }
+.product-grid.compact .card-body {
+  flex: 1; padding: 8px 10px; gap: 3px;
+}
+.product-grid.compact .card-name {
+  font-size: 13px; -webkit-line-clamp: 1;
+}
+.product-grid.compact .card-sku { display: block; font-size: 10px; }
+.product-grid.compact .qty-row { padding-top: 5px; }
+.product-grid.compact .qty-btn { width: 24px; height: 24px; font-size: 13px; }
+.product-grid.compact .qty-num { font-size: 13px; width: 24px; }
+.product-grid.compact .card-actions {
+  display: flex; flex-direction: column;
+  padding: 8px 10px 8px 0;
+  gap: 5px; justify-content: center;
+  min-width: 82px;
+}
+.product-grid.compact .card-btn { padding: 7px 6px; font-size: 11px; }
 
 /* ── Product card ── */
 .product-card {
@@ -108,19 +132,15 @@ body {
 }
 .card-img { width: 100%; height: 100%; object-fit: contain; padding: 8px; display: block; }
 .card-img-placeholder { font-size: 44px; color: var(--muted); }
-.product-grid.compact .card-img-placeholder { font-size: 32px; }
 
 .card-body { padding: 10px 12px 6px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
-.product-grid.compact .card-body { padding: 8px 10px 4px; gap: 4px; }
 
 .card-name {
   font-size: 13px; font-weight: 600; line-height: 1.3;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.product-grid.compact .card-name { font-size: 12px; }
 
 .card-sku { font-size: 11px; color: var(--muted); font-family: monospace; }
-.product-grid.compact .card-sku { display: none; }
 
 .stock-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .stock-badge {
@@ -135,7 +155,6 @@ body {
   display: flex; align-items: center; gap: 6px;
   margin-top: auto; padding-top: 8px;
 }
-.product-grid.compact .qty-row { padding-top: 5px; }
 .qty-btn {
   width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
   background: var(--card2); color: var(--text); font-size: 16px; cursor: pointer;
@@ -143,23 +162,19 @@ body {
   transition: background .1s; flex-shrink: 0;
 }
 .qty-btn:hover { background: var(--border); }
-.product-grid.compact .qty-btn { width: 24px; height: 24px; font-size: 14px; }
 .qty-num {
   width: 30px; text-align: center; font-size: 14px;
   font-weight: 600; font-family: monospace;
 }
-.product-grid.compact .qty-num { font-size: 13px; width: 26px; }
 
 .card-actions {
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
   padding: 6px 12px 12px;
 }
-.product-grid.compact .card-actions { padding: 4px 10px 10px; gap: 4px; }
 .card-btn {
   padding: 8px 4px; border-radius: 6px; border: none; font-size: 12px;
   font-weight: 600; cursor: pointer; transition: all .15s;
 }
-.product-grid.compact .card-btn { padding: 6px 4px; font-size: 11px; }
 .btn-take {
   background: #fee2e2; color: var(--red); border: 1px solid #fecaca;
 }
@@ -396,7 +411,7 @@ body {
       <span class="search-icon">&#128269;</span>
       <input type="text" id="search" class="search-input" placeholder="Search products…" oninput="renderGrid()">
     </div>
-    <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle grid size">&#8859;</button>
+    <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle list / grid view">&#9776;</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
   </div>
   <div class="chip-bar" id="chip-bar"></div>
