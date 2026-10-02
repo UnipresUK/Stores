@@ -57,6 +57,13 @@ body {
 }
 .icon-btn:hover { color: var(--text); border-color: var(--dim); }
 .icon-btn.active { color: var(--accent); border-color: var(--accent); }
+.sort-select {
+  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 6px 10px; cursor: pointer; flex-shrink: 0; outline: none;
+  transition: border .15s;
+}
+.sort-select:focus { border-color: var(--accent); }
 
 /* ── Chip bar ── */
 .chip-bar {
@@ -310,6 +317,11 @@ body {
       <span class="search-icon">&#128269;</span>
       <input type="text" id="search" class="search-input" placeholder="Search products…" oninput="renderGrid()">
     </div>
+    <select id="sort-select" class="sort-select" onchange="renderGrid()" title="Sort order">
+      <option value="location">Location</option>
+      <option value="category">Category</option>
+      <option value="name">Name</option>
+    </select>
     <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle list / grid view">&#9776;</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
   </div>
@@ -605,14 +617,38 @@ function toggleDensity() {
   document.getElementById('density-btn').classList.toggle('active', compact);
 }
 
+// ── Location sort comparator ─────────────────────────────────────────────────
+function parseLoc(loc) {
+  const m = (loc || '').trim().match(/^([A-Za-z]+)(\d+)$/);
+  return m ? [m[1].toUpperCase(), parseInt(m[2], 10)] : [loc || '￿', 0];
+}
+function cmpLocation(a, b) {
+  const [aL, aN] = parseLoc(a.location);
+  const [bL, bN] = parseLoc(b.location);
+  if (aL.length !== bL.length) return aL.length - bL.length; // A* before AA*
+  if (aL !== bL) return aL < bL ? -1 : 1;
+  return aN - bN;
+}
+
 // ── Render grid ──────────────────────────────────────────────────────────────
 function renderGrid() {
   const q = document.getElementById('search').value.toLowerCase();
+  const sortBy = document.getElementById('sort-select').value;
+
   const filtered = products.filter(p => {
     if (activeCategory && p.category !== activeCategory) return false;
     if (activeOem && p.oem !== activeOem) return false;
     if (q && !`${p.description} ${p.sku} ${p.category} ${p.oem} ${p.partNumber}`.toLowerCase().includes(q)) return false;
     return true;
+  });
+
+  filtered.sort((a, b) => {
+    if (sortBy === 'category') {
+      const cat = (a.category || '').localeCompare(b.category || '');
+      return cat !== 0 ? cat : cmpLocation(a, b);
+    }
+    if (sortBy === 'name') return (a.description || '').localeCompare(b.description || '');
+    return cmpLocation(a, b); // default: location
   });
 
   document.getElementById('grid-count').textContent =
