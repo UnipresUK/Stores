@@ -338,7 +338,11 @@ body {
     <div class="modal-sub" id="req-sub"></div>
     <div class="m-field">
       <label>Quantity</label>
-      <input type="number" id="req-qty" min="1" value="1">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="req-qty" min="1" value="1" style="flex:1">
+        <button id="req-max-btn" class="btn-cancel" style="white-space:nowrap;padding:10px 14px" onclick="setReqMax()">Max</button>
+      </div>
+      <div id="req-max-hint" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
     </div>
     <div class="m-field">
       <label>Your Name</label>
@@ -650,7 +654,7 @@ function cardHtml(p) {
     </div>
     <div class="card-body">
       <div class="card-name">${esc(p.description)}</div>
-      <div class="card-sku">${esc(p.sku)}${p.partNumber ? ' &middot; ' + esc(p.partNumber) : ''}</div>
+      <div class="card-sku">${p.location ? esc(p.location) : ''}</div>
       <div class="stock-row">
         <span class="stock-badge ${badgeCls}">${badgeTxt}</span>
         ${p.unit ? `<span class="unit">/ ${esc(p.unit)}</span>` : ''}
@@ -735,11 +739,29 @@ function openReq(sku) {
   const p = products.find(x => x.sku === sku);
   if (!p) return;
   reqPending = p;
-  document.getElementById('req-sub').textContent  = p.description;
-  document.getElementById('req-qty').value         = getCardQty(sku);
-  document.getElementById('req-name').value        = currentUser;
+  document.getElementById('req-sub').textContent = p.description;
+  document.getElementById('req-name').value       = currentUser;
+
+  const maxQty = Number(p.maxLevel) || 0;
+  const hint   = document.getElementById('req-max-hint');
+  const btn    = document.getElementById('req-max-btn');
+  if (maxQty > 0) {
+    document.getElementById('req-qty').value = maxQty;
+    hint.textContent = `Max level: ${maxQty}`;
+    btn.style.display = '';
+  } else {
+    document.getElementById('req-qty').value = getCardQty(sku);
+    hint.textContent = '';
+    btn.style.display = 'none';
+  }
+
   document.getElementById('req-modal').classList.add('open');
   setTimeout(() => document.getElementById('req-name').focus(), 80);
+}
+
+function setReqMax() {
+  const max = Number(reqPending && reqPending.maxLevel) || 0;
+  if (max > 0) document.getElementById('req-qty').value = max;
 }
 
 function closeReq() {
