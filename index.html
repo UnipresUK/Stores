@@ -57,13 +57,20 @@ body {
 }
 .icon-btn:hover { color: var(--text); border-color: var(--dim); }
 .icon-btn.active { color: var(--accent); border-color: var(--accent); }
-.sort-select {
-  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text); font-family: inherit; font-size: 12px; font-weight: 600;
-  padding: 6px 10px; cursor: pointer; flex-shrink: 0; outline: none;
-  transition: border .15s;
+.sort-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 16px 8px; overflow-x: auto; scrollbar-width: none;
 }
-.sort-select:focus { border-color: var(--accent); }
+.sort-bar::-webkit-scrollbar { display: none; }
+.sort-label { font-size: 11px; font-weight: 600; color: var(--muted); flex-shrink: 0; text-transform: uppercase; letter-spacing: .5px; }
+.sort-chip {
+  flex-shrink: 0; padding: 4px 12px; border-radius: 20px; font-size: 12px;
+  font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+  background: var(--card2); color: var(--dim); transition: all .15s; white-space: nowrap;
+  font-family: inherit;
+}
+.sort-chip:hover { border-color: var(--dim); color: var(--text); }
+.sort-chip.active { background: var(--text); border-color: var(--text); color: var(--card); }
 
 /* ── Chip bar ── */
 .chip-bar {
@@ -314,15 +321,16 @@ body {
     <div class="brand">UNIPRES / STORES</div>
     <div class="search-wrap">
       <span class="search-icon">&#128269;</span>
-      <input type="text" id="search" class="search-input" placeholder="Search products…" oninput="renderGrid()">
+      <input type="text" id="search" class="search-input" placeholder="Search name, location…" oninput="renderGrid()">
     </div>
-    <select id="sort-select" class="sort-select" onchange="renderGrid()" title="Sort order">
-      <option value="location">Location</option>
-      <option value="category">Category</option>
-      <option value="name">Name</option>
-    </select>
     <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle list / grid view">&#9776;</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
+  </div>
+  <div class="sort-bar">
+    <span class="sort-label">Sort:</span>
+    <button class="sort-chip" data-sort="location" onclick="setSort('location')">Location</button>
+    <button class="sort-chip" data-sort="category" onclick="setSort('category')">Category</button>
+    <button class="sort-chip" data-sort="name" onclick="setSort('name')">Name</button>
   </div>
   <div class="chip-bar" id="chip-bar"></div>
   <div class="chip-bar" id="oem-bar" style="padding-top:2px;padding-bottom:10px"></div>
@@ -449,6 +457,7 @@ let products = [];
 let reqPending = null;
 let activeCategory = '';
 let activeOem      = '';
+let activeSort     = 'location';
 let compact  = window.matchMedia('(max-width:520px)').matches;
 let takePending = null;
 let currentUser  = '';
@@ -568,7 +577,7 @@ async function loadProducts() {
     const data = await res.json();
     products = (Array.isArray(data) ? data : []).filter(p => (p.description || '').trim());
     buildChips();
-    renderGrid();
+    setSort('location');  // mark default sort chip active
   } catch (e) {
     document.getElementById('product-grid').innerHTML =
       '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:48px;margin-bottom:14px">⚠️</div><p>Could not load products. Check your API URL.</p></div>';
@@ -609,6 +618,13 @@ function setOem(o) {
   renderGrid();
 }
 
+function setSort(s) {
+  activeSort = s;
+  document.querySelectorAll('.sort-chip').forEach(b =>
+    b.classList.toggle('active', b.dataset.sort === s));
+  renderGrid();
+}
+
 // ── Grid toggle ──────────────────────────────────────────────────────────────
 function toggleDensity() {
   compact = !compact;
@@ -632,21 +648,20 @@ function cmpLocation(a, b) {
 // ── Render grid ──────────────────────────────────────────────────────────────
 function renderGrid() {
   const q = document.getElementById('search').value.toLowerCase();
-  const sortBy = document.getElementById('sort-select').value;
 
   const filtered = products.filter(p => {
     if (activeCategory && p.category !== activeCategory) return false;
     if (activeOem && p.oem !== activeOem) return false;
-    if (q && !`${p.description} ${p.sku} ${p.category} ${p.oem} ${p.partNumber}`.toLowerCase().includes(q)) return false;
+    if (q && !`${p.description} ${p.sku} ${p.category} ${p.oem} ${p.partNumber} ${p.location}`.toLowerCase().includes(q)) return false;
     return true;
   });
 
   filtered.sort((a, b) => {
-    if (sortBy === 'category') {
+    if (activeSort === 'category') {
       const cat = (a.category || '').localeCompare(b.category || '');
       return cat !== 0 ? cat : cmpLocation(a, b);
     }
-    if (sortBy === 'name') return (a.description || '').localeCompare(b.description || '');
+    if (activeSort === 'name') return (a.description || '').localeCompare(b.description || '');
     return cmpLocation(a, b); // default: location
   });
 
