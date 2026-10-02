@@ -352,6 +352,16 @@ body {
   font-size: 13px; padding: 3px 9px; border-radius: 5px;
   min-width: 44px; text-align: center; flex-shrink: 0;
 }
+.st-thumb {
+  width: 44px; height: 44px; object-fit: contain;
+  border-radius: 6px; background: var(--card2); padding: 3px;
+  flex-shrink: 0;
+}
+.st-thumb-ph {
+  width: 44px; height: 44px; border-radius: 6px; background: var(--card2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
 .st-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-cur { font-size: 12px; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
@@ -939,8 +949,13 @@ function openStockTake() {
 
   body.innerHTML = sorted.map(p => {
     const loc = p.location ? `<span class="st-loc">${esc(p.location)}</span>` : '<span class="st-loc" style="background:var(--muted)">—</span>';
+    const imgUrl = (p.imageFilename || '').trim();
+    const thumb = imgUrl
+      ? `<img src="${esc(imgUrl)}" class="st-thumb" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="st-thumb-ph" style="display:none">📦</span>`
+      : `<span class="st-thumb-ph">📦</span>`;
     return `<div class="st-row" id="str-${esc(p.sku)}">
       ${loc}
+      ${thumb}
       <span class="st-name" title="${esc(p.description)}">${esc(p.description)}</span>
       <span class="st-cur">(${Number(p.currentStock) || 0})</span>
       <input class="st-input" type="number" min="0"
