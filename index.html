@@ -325,6 +325,50 @@ body {
   border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Stock Take overlay ── */
+.st-overlay {
+  display: none; position: fixed; inset: 0; z-index: 400;
+  background: var(--bg); flex-direction: column;
+}
+.st-overlay.open { display: flex; }
+.st-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; background: var(--card);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.st-header h2 { flex: 1; font-size: 16px; font-weight: 700; }
+.st-header .st-count { font-size: 12px; color: var(--muted); }
+.st-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
+.st-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px;
+  transition: border-color .15s;
+}
+.st-row.changed { border-color: var(--accent); background: #f0f4ff; }
+.st-loc {
+  background: var(--accent); color: white; font-weight: 800;
+  font-size: 13px; padding: 3px 9px; border-radius: 5px;
+  min-width: 44px; text-align: center; flex-shrink: 0;
+}
+.st-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-cur { font-size: 12px; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
+.st-input {
+  width: 64px; flex-shrink: 0; text-align: center;
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text); font-family: inherit;
+  font-size: 14px; font-weight: 600; padding: 7px 6px; outline: none;
+  transition: border .15s;
+}
+.st-input:focus { border-color: var(--accent); }
+.st-footer {
+  padding: 14px 16px; background: var(--card); border-top: 1px solid var(--border);
+  display: flex; gap: 10px; flex-shrink: 0;
+}
+.st-footer .btn-cancel { flex: 1; }
+.st-footer .btn-confirm { flex: 2; }
 </style>
 </head>
 <body>
@@ -336,6 +380,7 @@ body {
       <span class="search-icon">&#128269;</span>
       <input type="text" id="search" class="search-input" placeholder="Search name, location…" oninput="renderGrid()">
     </div>
+    <button class="icon-btn" onclick="openStockTake()" title="Stock Take">&#128203;</button>
     <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle list / grid view">&#9776;</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
   </div>
@@ -404,6 +449,20 @@ body {
       <button class="btn-cancel" onclick="closeTake()">Cancel</button>
       <button class="btn-confirm" id="take-confirm" onclick="confirmTake()">Confirm Take</button>
     </div>
+  </div>
+</div>
+
+<!-- Stock Take overlay -->
+<div class="st-overlay" id="st-overlay">
+  <div class="st-header">
+    <h2>&#128203; Stock Take</h2>
+    <span class="st-count" id="st-count"></span>
+    <button class="icon-btn" onclick="closeStockTake()" title="Close">&#215;</button>
+  </div>
+  <div class="st-body" id="st-body"></div>
+  <div class="st-footer">
+    <button class="btn-cancel" onclick="closeStockTake()">Cancel</button>
+    <button class="btn-confirm" id="st-save-btn" onclick="saveStockTake()">Save Changes</button>
   </div>
 </div>
 
@@ -865,6 +924,87 @@ async function confirmReq() {
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Send Request';
+  }
+}
+
+// ── Stock Take ────────────────────────────────────────────────────────────────
+function openStockTake() {
+  // passcode gate
+  const code = prompt('Enter settings passcode to begin stock take:');
+  if (code === null) return;
+  if (code !== PASSCODE) { toast('Incorrect passcode', 'error'); return; }
+
+  const sorted = [...products].sort(cmpLocation);
+  const body   = document.getElementById('st-body');
+
+  body.innerHTML = sorted.map(p => {
+    const loc = p.location ? `<span class="st-loc">${esc(p.location)}</span>` : '<span class="st-loc" style="background:var(--muted)">—</span>';
+    return `<div class="st-row" id="str-${esc(p.sku)}">
+      ${loc}
+      <span class="st-name" title="${esc(p.description)}">${esc(p.description)}</span>
+      <span class="st-cur">(${Number(p.currentStock) || 0})</span>
+      <input class="st-input" type="number" min="0"
+        data-sku="${esc(p.sku)}" data-orig="${Number(p.currentStock) || 0}"
+        value="${Number(p.currentStock) || 0}"
+        oninput="stRowChange(this)">
+    </div>`;
+  }).join('');
+
+  updateStCount();
+  document.getElementById('st-overlay').classList.add('open');
+}
+
+function stRowChange(input) {
+  const changed = parseInt(input.value, 10) !== parseInt(input.dataset.orig, 10);
+  input.closest('.st-row').classList.toggle('changed', changed);
+  updateStCount();
+}
+
+function updateStCount() {
+  const n = document.querySelectorAll('.st-row.changed').length;
+  document.getElementById('st-count').textContent = n > 0 ? `${n} changed` : 'No changes yet';
+  document.getElementById('st-save-btn').disabled = n === 0;
+}
+
+function closeStockTake() {
+  document.getElementById('st-overlay').classList.remove('open');
+}
+
+async function saveStockTake() {
+  const changes = [...document.querySelectorAll('.st-row.changed')].map(row => {
+    const inp = row.querySelector('.st-input');
+    return { sku: inp.dataset.sku, qty: parseInt(inp.value, 10) };
+  }).filter(c => !isNaN(c.qty) && c.qty >= 0);
+
+  if (!changes.length) return;
+
+  const btn = document.getElementById('st-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+  try {
+    const res = await apiFetch('POST', {
+      action: 'stockTake',
+      passcode: PASSCODE,
+      requester: currentUser,
+      items: changes
+    });
+    if (!res.ok) throw new Error(res.error || 'Server error');
+
+    // Update local product data so the grid reflects new counts immediately
+    changes.forEach(c => {
+      const p = products.find(x => x.sku === c.sku);
+      if (p) p.currentStock = c.qty;
+    });
+
+    toast(`Stock take saved — ${changes.length} item${changes.length !== 1 ? 's' : ''} updated ✓`, 'success');
+    closeStockTake();
+    renderGrid();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Save Changes';
   }
 }
 

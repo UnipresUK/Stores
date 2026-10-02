@@ -46,6 +46,7 @@ function doPost(e) {
   if (body.action) action = body.action;
 
   if (action === "take")           return handleTakeStock(body);
+  if (action === "stockTake")      return handleStockTake(body);
   if (action === "addUser")        return handleAddUser(body);
   if (action === "updateSettings") return handleUpdateSettings(body);
   return handleReorder(body);
@@ -159,6 +160,65 @@ function handleTakeStock(body) {
   }
 
   return jsonResponse({ ok: true, sku: sku, currentStock: newStock });
+}
+
+// ── Stock take (set absolute quantities) ──────────────────────────────────────
+function handleStockTake(body) {
+  if ((body.passcode || "") !== SETTINGS_PASSCODE) {
+    return jsonResponse({ ok: false, error: "Invalid passcode" });
+  }
+  var requester = (body.requester || "Anonymous").toString().trim();
+  var items = Array.isArray(body.items) ? body.items : [];
+  if (!items.length) return jsonResponse({ ok: false, error: "No items provided" });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  var results = [];
+  try {
+    var sheet   = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(PRODUCTS_SHEET);
+    var values  = sheet.getDataRange().getValues();
+    var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    var skuCol  = headers.indexOf("sku");
+    var stkCol  = headers.indexOf("current stock");
+    var descCol = headers.indexOf("description");
+    if (skuCol < 0 || stkCol < 0) throw new Error("Products sheet missing SKU or Current Stock column");
+
+    for (var i = 0; i < items.length; i++) {
+      var sku    = (items[i].sku || "").toString().trim();
+      var newQty = Math.max(0, Number(items[i].qty) || 0);
+      for (var r = 1; r < values.length; r++) {
+        if (values[r][skuCol].toString() === sku) {
+          var oldQty = Number(values[r][stkCol]) || 0;
+          sheet.getRange(r + 1, stkCol + 1).setValue(newQty);
+          var desc = descCol >= 0 ? values[r][descCol].toString() : sku;
+          results.push({ sku: sku, description: desc, oldQty: oldQty, newQty: newQty });
+          break;
+        }
+      }
+    }
+  } finally {
+    lock.releaseLock();
+  }
+
+  appendStockTakeLog(requester, results);
+  return jsonResponse({ ok: true, updated: results.length });
+}
+
+function appendStockTakeLog(requester, results) {
+  var SHEET_NAME = "StockTakeLog";
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(["Timestamp", "Requester", "SKU", "Description", "Old Qty", "New Qty"]);
+    sheet.getRange(1, 1, 1, 6).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var ts = new Date();
+  var rows = results.map(function(r) {
+    return [ts, requester, r.sku, r.description, r.oldQty, r.newQty];
+  });
+  if (rows.length) sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 6).setValues(rows);
 }
 
 // ── Read products ─────────────────────────────────────────────────────────────
