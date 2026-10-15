@@ -386,6 +386,13 @@ body {
 }
 .st-footer .btn-cancel { flex: 1; }
 .st-footer .btn-confirm { flex: 2; }
+.order-section-head {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); padding: 10px 12px 4px; margin-top: 6px;
+}
+.order-row { cursor: pointer; }
+.order-row.selected { border-color: var(--accent); background: #f0f4ff; }
+.order-check { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -397,6 +404,7 @@ body {
       <span class="search-icon">&#128269;</span>
       <input type="text" id="search" class="search-input" placeholder="Search name, location…" oninput="renderGrid()">
     </div>
+    <button class="icon-btn" onclick="openManualOrder()" title="Manual Order">&#128722;</button>
     <button class="icon-btn" onclick="openStockTake()" title="Stock Take">&#128203;</button>
     <button class="icon-btn" id="density-btn" onclick="toggleDensity()" title="Toggle list / grid view">&#9776;</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">&#9881;</button>
@@ -480,6 +488,20 @@ body {
   <div class="st-footer">
     <button class="btn-cancel" onclick="closeStockTake()">Cancel</button>
     <button class="btn-confirm" id="st-save-btn" onclick="saveStockTake()">Save Changes</button>
+  </div>
+</div>
+
+<!-- Manual Order overlay -->
+<div class="st-overlay" id="order-overlay">
+  <div class="st-header">
+    <h2>&#128722; Manual Order</h2>
+    <span class="st-count" id="order-count"></span>
+    <button class="icon-btn" onclick="closeManualOrder()" title="Close">&#215;</button>
+  </div>
+  <div class="st-body" id="order-body"></div>
+  <div class="st-footer">
+    <button class="btn-cancel" onclick="closeManualOrder()">Cancel</button>
+    <button class="btn-confirm" id="order-send-btn" onclick="sendManualOrder()">Send Order Email</button>
   </div>
 </div>
 
@@ -1038,6 +1060,90 @@ async function saveStockTake() {
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Save Changes';
+  }
+}
+
+// ── Manual Order ─────────────────────────────────────────────────────────────
+function openManualOrder() {
+  const code = prompt('Enter passcode to open manual order:');
+  if (code === null) return;
+  if (code !== PASSCODE) { toast('Incorrect passcode', 'error'); return; }
+
+  const body = document.getElementById('order-body');
+
+  // Group by OEM (sorted), then by location within each group
+  const groups = {};
+  const oemOrder = [];
+  [...products].sort(cmpLocation).forEach(p => {
+    const oem = p.oem || 'Other';
+    if (!groups[oem]) { groups[oem] = []; oemOrder.push(oem); }
+    groups[oem].push(p);
+  });
+  oemOrder.sort();
+
+  body.innerHTML = oemOrder.map(oem => {
+    const rows = groups[oem].map(p => {
+      const maxQty = Number(p.maxLevel) || 1;
+      const img = (p.imageFilename || '').trim();
+      const thumb = img
+        ? `<img class="st-thumb" src="${esc(img)}" alt="" onerror="this.style.display='none'">`
+        : `<div class="st-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`;
+      return `<div class="st-row order-row" onclick="toggleOrderRow(this)" data-sku="${esc(p.sku)}">
+        <input type="checkbox" class="order-check" data-sku="${esc(p.sku)}" onclick="event.stopPropagation();toggleOrderRow(this.closest('.order-row'))">
+        <span class="st-loc">${esc(p.location || '—')}</span>
+        ${thumb}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description)}</div>
+          ${p.partNumber ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${esc(p.partNumber)}</div>` : ''}
+        </div>
+        <input type="number" class="st-input order-qty" value="${maxQty}" min="1" data-sku="${esc(p.sku)}" onclick="event.stopPropagation()">
+      </div>`;
+    }).join('');
+    return `<div class="order-section-head">${esc(oem)}</div>${rows}`;
+  }).join('');
+
+  updateOrderCount();
+  document.getElementById('order-overlay').classList.add('open');
+}
+
+function toggleOrderRow(row) {
+  const cb = row.querySelector('.order-check');
+  cb.checked = !cb.checked;
+  row.classList.toggle('selected', cb.checked);
+  updateOrderCount();
+}
+
+function updateOrderCount() {
+  const n = document.querySelectorAll('.order-check:checked').length;
+  document.getElementById('order-count').textContent = n ? `${n} selected` : '';
+}
+
+function closeManualOrder() {
+  document.getElementById('order-overlay').classList.remove('open');
+}
+
+async function sendManualOrder() {
+  const checked = [...document.querySelectorAll('.order-check:checked')];
+  if (!checked.length) { toast('Select at least one item', 'error'); return; }
+
+  const items = checked.map(cb => {
+    const sku = cb.dataset.sku;
+    const p   = products.find(x => x.sku === sku);
+    const qty = parseInt(cb.closest('.order-row').querySelector('.order-qty').value, 10) || 1;
+    return { sku, description: p.description, oem: p.oem, location: p.location, partNumber: p.partNumber, qty };
+  });
+
+  const btn = document.getElementById('order-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await apiFetch('POST', { action: 'manualReorder', requester: currentUser, items });
+    if (!res.ok) throw new Error(res.error || 'Failed');
+    toast(`Order email sent for ${items.length} item${items.length !== 1 ? 's' : ''} ✓`, 'success');
+    closeManualOrder();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Order Email';
   }
 }
 

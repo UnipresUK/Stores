@@ -48,6 +48,7 @@ function doPost(e) {
 
   if (action === "take")           return handleTakeStock(body);
   if (action === "stockTake")      return handleStockTake(body);
+  if (action === "manualReorder")  return handleManualReorder(body);
   if (action === "addUser")        return handleAddUser(body);
   if (action === "updateSettings") return handleUpdateSettings(body);
   return handleReorder(body);
@@ -374,6 +375,41 @@ function appendStockLog(requester, sku, description, qty, newStock) {
     sheet.setFrozenRows(1);
   }
   sheet.appendRow([new Date(), requester, sku, qty, newStock, description]);
+}
+
+// ── Manual reorder ────────────────────────────────────────────────────────────
+function handleManualReorder(body) {
+  var requester = (body.requester || "").toString().trim();
+  var items = Array.isArray(body.items) ? body.items : [];
+  if (!items.length) return jsonResponse({ ok: false, error: "No items provided" });
+
+  var groups = {};
+  var oemOrder = [];
+  items.forEach(function(item) {
+    var oem = (item.oem || "Other").toString().trim() || "Other";
+    if (!groups[oem]) { groups[oem] = []; oemOrder.push(oem); }
+    groups[oem].push(item);
+  });
+  oemOrder.sort();
+
+  var sections = oemOrder.map(function(oem) {
+    var lines = groups[oem].map(function(item, idx) {
+      return (idx + 1) + ") Part number = " + (item.partNumber || item.sku || "-") +
+             "    Description = " + item.description +
+             "    Qty x" + item.qty;
+    });
+    return oem + ":\n\n" + lines.join("\n");
+  });
+
+  var note = requester ? " (requested by " + requester + ")" : "";
+  var subject = "Stock order request" + note;
+  var emailBody =
+    "Hello,\n\nCan you please order:\n\n" +
+    sections.join("\n\n\n") +
+    "\n\nThank you";
+
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, emailBody);
+  return jsonResponse({ ok: true });
 }
 
 // ── Reorder queue ─────────────────────────────────────────────────────────────
