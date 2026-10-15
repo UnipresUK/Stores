@@ -386,6 +386,10 @@ body {
 }
 .st-footer .btn-cancel { flex: 1; }
 .st-footer .btn-confirm { flex: 2; }
+.order-filters {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 10px 0 2px; flex-shrink: 0;
+}
 .order-section-head {
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
   color: var(--muted); padding: 10px 12px 4px; margin-top: 6px;
@@ -497,6 +501,18 @@ body {
     <h2>&#128722; Manual Order</h2>
     <span class="st-count" id="order-count"></span>
     <button class="icon-btn" onclick="closeManualOrder()" title="Close">&#215;</button>
+  </div>
+  <div class="order-filters">
+    <div class="search-wrap" style="margin:0 16px">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="order-search" class="search-input" placeholder="Search name, part, location…" oninput="renderOrderBody()">
+    </div>
+    <div class="sort-bar" style="padding:6px 16px 0" id="order-sort-bar">
+      <span class="sort-label">Sort:</span>
+      <button class="sort-chip active" data-osort="location" onclick="setOrderSort('location')">Location</button>
+      <button class="sort-chip" data-osort="name" onclick="setOrderSort('name')">Name</button>
+    </div>
+    <div class="chip-bar" id="order-cat-bar" style="padding:4px 16px 8px"></div>
   </div>
   <div class="st-body" id="order-body"></div>
   <div class="st-footer">
@@ -1064,52 +1080,119 @@ async function saveStockTake() {
 }
 
 // ── Manual Order ─────────────────────────────────────────────────────────────
+let orderSort     = 'location';
+let orderCategory = '';
+
 function openManualOrder() {
   const code = prompt('Enter passcode to open manual order:');
   if (code === null) return;
   if (code !== PASSCODE) { toast('Incorrect passcode', 'error'); return; }
 
-  const body = document.getElementById('order-body');
+  orderSort     = 'location';
+  orderCategory = '';
+  document.getElementById('order-search').value = '';
 
-  // Group by OEM (sorted), then by location within each group
+  // Build category chips
+  const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+  const catBar = document.getElementById('order-cat-bar');
+  catBar.innerHTML = '<span class="sort-label">Filter:</span>' +
+    ['All', ...cats].map(c => {
+      const active = c === 'All';
+      return `<button class="chip${active ? ' active' : ''}" onclick='setOrderCategory(${JSON.stringify(c)})'>${esc(c)}</button>`;
+    }).join('');
+
+  renderOrderBody();
+  document.getElementById('order-overlay').classList.add('open');
+}
+
+function setOrderSort(s) {
+  orderSort = s;
+  document.querySelectorAll('[data-osort]').forEach(b =>
+    b.classList.toggle('active', b.dataset.osort === s));
+  renderOrderBody();
+}
+
+function setOrderCategory(c) {
+  orderCategory = c === 'All' ? '' : c;
+  document.querySelectorAll('#order-cat-bar .chip').forEach(b =>
+    b.classList.toggle('active', b.textContent === (orderCategory || 'All')));
+  renderOrderBody();
+}
+
+function renderOrderBody() {
+  const q = (document.getElementById('order-search').value || '').toLowerCase();
+
+  let filtered = products.filter(p => {
+    if (orderCategory && p.category !== orderCategory) return false;
+    if (q) {
+      const hay = (p.description + ' ' + p.partNumber + ' ' + p.location + ' ' + p.oem).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (orderSort === 'name') {
+    filtered.sort((a, b) => a.description.localeCompare(b.description));
+  } else {
+    filtered.sort(cmpLocation);
+  }
+
+  // Group by OEM
   const groups = {};
   const oemOrder = [];
-  [...products].sort(cmpLocation).forEach(p => {
+  filtered.forEach(p => {
     const oem = p.oem || 'Other';
     if (!groups[oem]) { groups[oem] = []; oemOrder.push(oem); }
     groups[oem].push(p);
   });
   oemOrder.sort();
 
+  // Preserve checked state across re-renders
+  const checked = new Set([...document.querySelectorAll('.order-check:checked')].map(c => c.dataset.sku));
+
+  const body = document.getElementById('order-body');
+  if (!filtered.length) {
+    body.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted)">No products found</div>';
+    return;
+  }
+
   body.innerHTML = oemOrder.map(oem => {
     const rows = groups[oem].map(p => {
-      const maxQty = Number(p.maxLevel) || 1;
+      const maxQty   = Number(p.maxLevel) || 1;
+      const isChecked = checked.has(p.sku);
       const img = (p.imageFilename || '').trim();
       const thumb = img
         ? `<img class="st-thumb" src="${esc(img)}" alt="" onerror="this.style.display='none'">`
         : `<div class="st-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`;
-      return `<div class="st-row order-row" onclick="toggleOrderRow(this)" data-sku="${esc(p.sku)}">
-        <input type="checkbox" class="order-check" data-sku="${esc(p.sku)}" onclick="event.stopPropagation();toggleOrderRow(this.closest('.order-row'))">
+      return `<div class="st-row order-row${isChecked ? ' selected' : ''}" onclick="toggleOrderRow(this)" data-sku="${esc(p.sku)}">
+        <input type="checkbox" class="order-check" data-sku="${esc(p.sku)}"
+          ${isChecked ? 'checked' : ''}
+          onchange="orderCheckChange(this)" onclick="event.stopPropagation()">
         <span class="st-loc">${esc(p.location || '—')}</span>
         ${thumb}
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description)}</div>
           ${p.partNumber ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${esc(p.partNumber)}</div>` : ''}
         </div>
-        <input type="number" class="st-input order-qty" value="${maxQty}" min="1" data-sku="${esc(p.sku)}" onclick="event.stopPropagation()">
+        <input type="number" class="st-input order-qty" value="${maxQty}" min="1"
+          data-sku="${esc(p.sku)}" onclick="event.stopPropagation()">
       </div>`;
     }).join('');
     return `<div class="order-section-head">${esc(oem)}</div>${rows}`;
   }).join('');
 
   updateOrderCount();
-  document.getElementById('order-overlay').classList.add('open');
 }
 
 function toggleOrderRow(row) {
   const cb = row.querySelector('.order-check');
   cb.checked = !cb.checked;
   row.classList.toggle('selected', cb.checked);
+  updateOrderCount();
+}
+
+function orderCheckChange(cb) {
+  cb.closest('.order-row').classList.toggle('selected', cb.checked);
   updateOrderCount();
 }
 
