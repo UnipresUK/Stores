@@ -386,7 +386,7 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
   var sections = oemOrder.map(function(oem) {
     var rows = groups[oem].map(function(item, idx) {
       var qty    = item.qty !== undefined ? item.qty : (item.maxLevel > 0 ? item.maxLevel : 1);
-      var partNo = item.partNumber || item.sku || "-";
+      var partNo = item.partNumber || "";
       var link   = (item.supplierLink || "").trim();
       if (link && !/^https?:\/\//i.test(link)) link = "https://" + link;
       var dsCell = link
@@ -430,19 +430,23 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
     "<p style='font-family:sans-serif;font-size:14px;margin-top:24px'>Thank you</p>";
 }
 
-function lookupSupplierLinks(skus) {
+function lookupProductDetails(skus) {
   var sheet   = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(PRODUCTS_SHEET);
   var values  = sheet.getDataRange().getValues();
   var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
   var skuCol  = headers.indexOf("sku");
   var linkCol = headers.indexOf("supplier link");
   var dsCol   = headers.indexOf("supplier datasheet");
+  var pnCol   = headers.indexOf("part number");
   var map     = {};
   for (var i = 1; i < values.length; i++) {
     var s = values[i][skuCol].toString();
     if (skus.indexOf(s) >= 0) {
-      map[s] = (linkCol >= 0 ? values[i][linkCol].toString() : "") ||
-               (dsCol   >= 0 ? values[i][dsCol].toString()   : "");
+      map[s] = {
+        supplierLink: (linkCol >= 0 ? values[i][linkCol].toString() : "") ||
+                      (dsCol   >= 0 ? values[i][dsCol].toString()   : ""),
+        partNumber:   pnCol >= 0 ? values[i][pnCol].toString() : ""
+      };
     }
   }
   return map;
@@ -555,13 +559,14 @@ function sendDailyReorderEmail() {
   oemOrder.sort();
 
   // Add qty, partNumber and supplierLink for the email builder
-  var allSkus = pending.map(function(p) { return p.sku; });
-  var linkMap = lookupSupplierLinks(allSkus);
+  var allSkus    = pending.map(function(p) { return p.sku; });
+  var detailMap  = lookupProductDetails(allSkus);
   oemOrder.forEach(function(oem) {
     groups[oem].forEach(function(item) {
+      var d = detailMap[item.sku] || {};
       item.qty          = item.maxLevel > 0 ? item.maxLevel : 1;
-      item.partNumber   = item.sku;
-      item.supplierLink = linkMap[item.sku] || "";
+      item.partNumber   = d.partNumber   || "";
+      item.supplierLink = d.supplierLink || "";
     });
   });
 
