@@ -390,13 +390,31 @@ body {
   background: var(--card); border-bottom: 1px solid var(--border);
   padding: 10px 0 2px; flex-shrink: 0;
 }
-.order-section-head {
-  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
-  color: var(--muted); padding: 10px 12px 4px; margin-top: 6px;
+.order-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.order-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--card2); color: var(--muted);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
-.order-row { cursor: pointer; }
-.order-row.selected { border-color: var(--accent); background: #f0f4ff; }
-.order-check { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+.order-table thead th:first-child { width: 36px; text-align: center; }
+.order-table thead th:last-child { width: 72px; }
+.order-table tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+.order-table tbody tr:hover { background: var(--card2); }
+.order-table tbody tr.selected { background: #eef2ff; }
+.order-table tbody tr.oem-head td {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--accent); background: var(--card2); padding: 6px 10px; cursor: default;
+}
+.order-table td { padding: 8px 10px; vertical-align: middle; }
+.order-table td:first-child { text-align: center; }
+.order-table .ot-thumb { width: 36px; height: 36px; object-fit: contain; border-radius: 4px; background: var(--card2); padding: 2px; }
+.order-table .ot-name { font-weight: 600; }
+.order-table .ot-part { font-size: 11px; color: var(--muted); font-family: monospace; }
+.order-table .ot-loc { display: inline-block; background: var(--accent); color: #fff; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 5px; white-space: nowrap; }
+.order-table .ot-qty { width: 60px; text-align: center; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 600; padding: 5px 4px; }
+.order-check { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -1156,35 +1174,41 @@ function renderOrderBody() {
     return;
   }
 
-  body.innerHTML = oemOrder.map(oem => {
-    const rows = groups[oem].map(p => {
-      const maxQty   = Number(p.maxLevel) || 1;
+  const tableRows = oemOrder.map(oem => {
+    const dataRows = groups[oem].map(p => {
+      const maxQty    = Number(p.maxLevel) || 1;
       const isChecked = checked.has(p.sku);
-      const img = (p.imageFilename || '').trim();
-      const thumb = img
-        ? `<img class="st-thumb" src="${esc(img)}" alt="" onerror="this.style.display='none'">`
-        : `<div class="st-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`;
-      return `<div class="st-row order-row${isChecked ? ' selected' : ''}" onclick="toggleOrderRow(this)" data-sku="${esc(p.sku)}">
-        <input type="checkbox" class="order-check" data-sku="${esc(p.sku)}"
+      const img       = (p.imageFilename || '').trim();
+      const thumb     = img
+        ? `<img class="ot-thumb" src="${esc(img)}" alt="" onerror="this.style.display='none'">`
+        : `<span style="font-size:22px">📦</span>`;
+      return `<tr class="${isChecked ? 'selected' : ''}" onclick="toggleOrderRow(this)" data-sku="${esc(p.sku)}">
+        <td><input type="checkbox" class="order-check" data-sku="${esc(p.sku)}"
           ${isChecked ? 'checked' : ''}
-          onchange="orderCheckChange(this)" onclick="event.stopPropagation()">
-        <span class="st-loc">${esc(p.location || '—')}</span>
-        ${thumb}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description)}</div>
-          ${p.partNumber ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${esc(p.partNumber)}</div>` : ''}
-        </div>
-        <input type="number" class="st-input order-qty" value="${maxQty}" min="1"
-          data-sku="${esc(p.sku)}" onclick="event.stopPropagation()">
-      </div>`;
+          onchange="orderCheckChange(this)" onclick="event.stopPropagation()"></td>
+        <td>${thumb}</td>
+        <td><span class="ot-loc">${esc(p.location || '—')}</span></td>
+        <td><div class="ot-name">${esc(p.description)}</div>
+            ${p.partNumber ? `<div class="ot-part">${esc(p.partNumber)}</div>` : ''}</td>
+        <td><input type="number" class="ot-qty order-qty" value="${maxQty}" min="1"
+          data-sku="${esc(p.sku)}" onclick="event.stopPropagation()"></td>
+      </tr>`;
     }).join('');
-    return `<div class="order-section-head">${esc(oem)}</div>${rows}`;
+    return `<tr class="oem-head"><td colspan="5">${esc(oem)}</td></tr>${dataRows}`;
   }).join('');
+
+  body.innerHTML = `<table class="order-table">
+    <thead><tr>
+      <th></th><th></th><th>Loc</th><th>Description / Part No.</th><th>Qty</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>`;
 
   updateOrderCount();
 }
 
 function toggleOrderRow(row) {
+  if (row.classList.contains('oem-head')) return;
   const cb = row.querySelector('.order-check');
   cb.checked = !cb.checked;
   row.classList.toggle('selected', cb.checked);
@@ -1192,7 +1216,7 @@ function toggleOrderRow(row) {
 }
 
 function orderCheckChange(cb) {
-  cb.closest('.order-row').classList.toggle('selected', cb.checked);
+  cb.closest('tr').classList.toggle('selected', cb.checked);
   updateOrderCount();
 }
 
@@ -1212,7 +1236,7 @@ async function sendManualOrder() {
   const items = checked.map(cb => {
     const sku = cb.dataset.sku;
     const p   = products.find(x => x.sku === sku);
-    const qty = parseInt(cb.closest('.order-row').querySelector('.order-qty').value, 10) || 1;
+    const qty = parseInt(cb.closest('tr').querySelector('.order-qty').value, 10) || 1;
     return { sku, description: p.description, oem: p.oem, location: p.location, partNumber: p.partNumber, qty };
   });
 
