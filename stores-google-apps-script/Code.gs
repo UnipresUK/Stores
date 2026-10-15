@@ -462,22 +462,20 @@ function sendDailyReorderEmail() {
 
   var sections = oemOrder.map(function(oem) {
     var items = groups[oem];
-    var lines = items.map(function(item) {
-      var order = item.suggestedQty > 0
-        ? "  →  order " + item.suggestedQty + " (max " + item.maxLevel + ")"
-        : "";
-      return "    [" + item.location + "]  " + item.description +
-             "\n         Stock: " + item.currentStock + "  |  Min: " + item.minLevel + order;
+    var lines = items.map(function(item, idx) {
+      var qty = item.suggestedQty > 0 ? item.suggestedQty : 1;
+      return (idx + 1) + ") Part number = " + (item.sku || "-") +
+             "    Description = " + item.description +
+             "    Qty x" + qty;
     });
-    return oem + " (" + items.length + " item" + (items.length !== 1 ? "s" : "") + ")\n" +
-           lines.join("\n\n");
+    return oem + ":\n\n" + lines.join("\n");
   });
 
-  var subject = "Reorder alert — " + pending.length + " item" + (pending.length !== 1 ? "s" : "") + " below minimum";
+  var subject = "Stock reorder request";
   var body    =
-    "Items at or below minimum stock level, grouped by OEM:\n\n" +
-    sections.join("\n\n──────────────────────\n\n") +
-    "\n\nGenerated: " + new Date().toLocaleString();
+    "Hello,\n\nCan you please order:\n\n" +
+    sections.join("\n\n\n") +
+    "\n\nThank you";
 
   MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
 }
