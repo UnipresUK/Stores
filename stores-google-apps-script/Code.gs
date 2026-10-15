@@ -385,8 +385,13 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
 
   var sections = oemOrder.map(function(oem) {
     var rows = groups[oem].map(function(item, idx) {
-      var qty = item.qty !== undefined ? item.qty : (item.maxLevel > 0 ? item.maxLevel : 1);
+      var qty    = item.qty !== undefined ? item.qty : (item.maxLevel > 0 ? item.maxLevel : 1);
       var partNo = item.partNumber || item.sku || "-";
+      var link   = (item.supplierLink || "").trim();
+      if (link && !/^https?:\/\//i.test(link)) link = "https://" + link;
+      var dsCell = link
+        ? "<td style='" + TD + "'><a href='" + link + "' style='color:#4f7ef8;font-weight:600;text-decoration:none'>&#128196; View</a></td>"
+        : "<td style='" + TD + ";color:#aaa'>—</td>";
       var stockCells = showStock
         ? "<td style='" + TD + "'>" + (item.location || "") + "</td>" +
           "<td style='" + TDc + "'>" + item.currentStock + "</td>"
@@ -397,6 +402,7 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
         "<td style='" + TD + ";font-family:monospace'>" + partNo + "</td>" +
         "<td style='" + TD + "'>" + item.description + "</td>" +
         stockCells +
+        dsCell +
         "<td style='" + TDc + "'>" + qty + "</td>" +
         "</tr>";
     }).join("");
@@ -412,6 +418,7 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
         "<th style='" + TH + "'>Part Number</th>" +
         "<th style='" + TH + "'>Description</th>" +
         extraHeaders +
+        "<th style='" + TH + "'>Datasheet</th>" +
         "<th style='" + TH + ";text-align:center'>Qty</th>" +
       "</tr></thead>" +
       "<tbody>" + rows + "</tbody></table>";
@@ -421,6 +428,24 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
     "<p style='font-family:sans-serif;font-size:14px'>Can you please order:</p>" +
     sections +
     "<p style='font-family:sans-serif;font-size:14px;margin-top:24px'>Thank you</p>";
+}
+
+function lookupSupplierLinks(skus) {
+  var sheet   = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(PRODUCTS_SHEET);
+  var values  = sheet.getDataRange().getValues();
+  var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  var skuCol  = headers.indexOf("sku");
+  var linkCol = headers.indexOf("supplier link");
+  var dsCol   = headers.indexOf("supplier datasheet");
+  var map     = {};
+  for (var i = 1; i < values.length; i++) {
+    var s = values[i][skuCol].toString();
+    if (skus.indexOf(s) >= 0) {
+      map[s] = (linkCol >= 0 ? values[i][linkCol].toString() : "") ||
+               (dsCol   >= 0 ? values[i][dsCol].toString()   : "");
+    }
+  }
+  return map;
 }
 
 // ── Manual reorder ────────────────────────────────────────────────────────────
@@ -529,11 +554,14 @@ function sendDailyReorderEmail() {
   });
   oemOrder.sort();
 
-  // Add qty field (max level) for the email builder
+  // Add qty, partNumber and supplierLink for the email builder
+  var allSkus = pending.map(function(p) { return p.sku; });
+  var linkMap = lookupSupplierLinks(allSkus);
   oemOrder.forEach(function(oem) {
     groups[oem].forEach(function(item) {
-      item.qty = item.maxLevel > 0 ? item.maxLevel : 1;
-      item.partNumber = item.sku;
+      item.qty          = item.maxLevel > 0 ? item.maxLevel : 1;
+      item.partNumber   = item.sku;
+      item.supplierLink = linkMap[item.sku] || "";
     });
   });
 

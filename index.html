@@ -1237,7 +1237,9 @@ async function sendManualOrder() {
     const sku = cb.dataset.sku;
     const p   = products.find(x => x.sku === sku);
     const qty = parseInt(cb.closest('tr').querySelector('.order-qty').value, 10) || 1;
-    return { sku, description: p.description, oem: p.oem, location: p.location, partNumber: p.partNumber, qty };
+    const link = (p.supplierLink || p.datasheetLink || '').trim();
+    const supplierLink = link && !/^https?:\/\//i.test(link) ? 'https://' + link : link;
+    return { sku, description: p.description, oem: p.oem, location: p.location, partNumber: p.partNumber, qty, supplierLink };
   });
 
   const btn = document.getElementById('order-send-btn');
