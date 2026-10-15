@@ -9,6 +9,7 @@ var PRODUCTS_SHEET      = "Products";
 var REQUESTS_SHEET      = "Requests";
 var STOCK_LOG_SHEET     = "StockTaken";
 var USERS_SHEET         = "Users";
+var REORDER_QUEUE_SHEET = "ReorderQueue";
 var TAKE_EMAIL_PROPERTY = "takeEmailEnabled";
 var SETTINGS_PASSCODE   = "3110";
 
@@ -144,16 +145,21 @@ function handleTakeStock(body) {
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
-  var newStock;
+  var result;
   try {
-    newStock = deductStock(sku, qty);
+    result = deductStock(sku, qty);
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
   } finally {
     lock.releaseLock();
   }
 
+  var newStock = result.newStock;
   appendStockLog(requester, sku, description, qty, newStock);
+
+  if (result.minLevel > 0 && newStock <= result.minLevel) {
+    queueReorder(sku, description, result.location, newStock, result.minLevel, result.maxLevel);
+  }
 
   if (isTakeEmailEnabled()) {
     sendTakeNotificationEmail(requester, description, qty, newStock);
@@ -331,6 +337,9 @@ function deductStock(sku, qty) {
   var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
   var skuCol  = headers.indexOf("sku");
   var stkCol  = headers.indexOf("current stock");
+  var minCol  = headers.indexOf("min level");
+  var maxCol  = headers.indexOf("max level");
+  var locCol  = headers.indexOf("location");
 
   if (skuCol < 0 || stkCol < 0) {
     throw new Error("Products sheet is missing a SKU or Current Stock column");
@@ -338,10 +347,15 @@ function deductStock(sku, qty) {
 
   for (var i = 1; i < values.length; i++) {
     if (values[i][skuCol].toString() === sku) {
-      var current = Number(values[i][stkCol]) || 0;
-      var updated = Math.max(0, current - qty);
+      var current  = Number(values[i][stkCol]) || 0;
+      var updated  = Math.max(0, current - qty);
       sheet.getRange(i + 1, stkCol + 1).setValue(updated);
-      return updated;
+      return {
+        newStock:  updated,
+        minLevel:  minCol >= 0 ? Number(values[i][minCol]) || 0 : 0,
+        maxLevel:  maxCol >= 0 ? Number(values[i][maxCol]) || 0 : 0,
+        location:  locCol >= 0 ? values[i][locCol].toString() : ""
+      };
     }
   }
 
@@ -358,6 +372,97 @@ function appendStockLog(requester, sku, description, qty, newStock) {
     sheet.setFrozenRows(1);
   }
   sheet.appendRow([new Date(), requester, sku, qty, newStock, description]);
+}
+
+// ── Reorder queue ─────────────────────────────────────────────────────────────
+function queueReorder(sku, description, location, currentStock, minLevel, maxLevel) {
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(REORDER_QUEUE_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(REORDER_QUEUE_SHEET);
+    sheet.appendRow(["Timestamp", "SKU", "Description", "Location", "Current Stock", "Min Level", "Max Level", "Suggested Qty", "Sent"]);
+    sheet.getRange(1, 1, 1, 9).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+
+  var suggestedQty = Math.max(0, (Number(maxLevel) || 0) - (Number(currentStock) || 0));
+  var values = sheet.getDataRange().getValues();
+
+  // Update existing unsent row for this SKU rather than duplicating
+  for (var i = 1; i < values.length; i++) {
+    if (values[i][1].toString() === sku && !values[i][8]) {
+      sheet.getRange(i + 1, 5).setValue(currentStock);
+      sheet.getRange(i + 1, 8).setValue(suggestedQty);
+      return;
+    }
+  }
+
+  sheet.appendRow([new Date(), sku, description, location, currentStock, minLevel, maxLevel, suggestedQty, false]);
+}
+
+// Called by the 4:30 PM time-based trigger.
+function sendDailyReorderEmail() {
+  var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(REORDER_QUEUE_SHEET);
+  if (!sheet) return;
+
+  var values  = sheet.getDataRange().getValues();
+  var pending = [];
+  var rows    = [];
+
+  for (var i = 1; i < values.length; i++) {
+    if (!values[i][8]) {
+      pending.push({
+        sku:          values[i][1].toString(),
+        description:  values[i][2].toString(),
+        location:     values[i][3].toString(),
+        currentStock: values[i][4],
+        minLevel:     values[i][5],
+        maxLevel:     values[i][6],
+        suggestedQty: values[i][7]
+      });
+      rows.push(i + 1);
+    }
+  }
+
+  if (!pending.length) return;
+
+  // Mark all as sent before emailing (avoids duplicate sends on retry)
+  for (var j = 0; j < rows.length; j++) {
+    sheet.getRange(rows[j], 9).setValue(true);
+  }
+
+  var lines = pending.map(function(item) {
+    var order = item.suggestedQty > 0 ? "  →  order " + item.suggestedQty + " (to reach max " + item.maxLevel + ")" : "";
+    return "  [" + item.location + "]  " + item.description +
+           "\n       Stock: " + item.currentStock + "  |  Min: " + item.minLevel + order;
+  });
+
+  var subject = "Reorder alert — " + pending.length + " item" + (pending.length !== 1 ? "s" : "") + " below minimum";
+  var body    =
+    "The following items hit their minimum stock level today and need reordering:\n\n" +
+    lines.join("\n\n") +
+    "\n\nGenerated: " + new Date().toLocaleString();
+
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
+}
+
+// Run this function ONCE from the Apps Script editor to install the 4:30 PM trigger.
+// Extensions > Apps Script > select installDailyReorderTrigger > Run
+function installDailyReorderTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "sendDailyReorderEmail") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("sendDailyReorderEmail")
+    .timeBased()
+    .atHour(16)
+    .nearMinute(30)
+    .everyDays(1)
+    .create();
+  Logger.log("Reorder trigger installed: daily at 4:30 PM");
 }
 
 // ── Emails ────────────────────────────────────────────────────────────────────
