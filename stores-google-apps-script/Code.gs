@@ -377,6 +377,52 @@ function appendStockLog(requester, sku, description, qty, newStock) {
   sheet.appendRow([new Date(), requester, sku, qty, newStock, description]);
 }
 
+// ── Shared email HTML builder ─────────────────────────────────────────────────
+function buildOrderEmailHtml(groups, oemOrder, showStock) {
+  var TH = "padding:8px 14px;text-align:left;background:#4f7ef8;color:#fff;font-family:sans-serif;font-size:13px;white-space:nowrap";
+  var TD = "padding:8px 14px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:13px;vertical-align:middle";
+  var TDc = TD + ";text-align:center;font-weight:700";
+
+  var sections = oemOrder.map(function(oem) {
+    var rows = groups[oem].map(function(item, idx) {
+      var qty = item.qty !== undefined ? item.qty : (item.maxLevel > 0 ? item.maxLevel : 1);
+      var partNo = item.partNumber || item.sku || "-";
+      var stockCells = showStock
+        ? "<td style='" + TD + "'>" + (item.location || "") + "</td>" +
+          "<td style='" + TDc + "'>" + item.currentStock + "</td>"
+        : "";
+      var bg = idx % 2 === 0 ? "#ffffff" : "#f9fafb";
+      return "<tr style='background:" + bg + "'>" +
+        "<td style='" + TD + "'>" + (idx + 1) + "</td>" +
+        "<td style='" + TD + ";font-family:monospace'>" + partNo + "</td>" +
+        "<td style='" + TD + "'>" + item.description + "</td>" +
+        stockCells +
+        "<td style='" + TDc + "'>" + qty + "</td>" +
+        "</tr>";
+    }).join("");
+
+    var extraHeaders = showStock
+      ? "<th style='" + TH + "'>Location</th><th style='" + TH + "'>In Stock</th>"
+      : "";
+
+    return "<h3 style='font-family:sans-serif;font-size:15px;color:#1a2035;margin:24px 0 8px'>" + oem + "</h3>" +
+      "<table style='border-collapse:collapse;width:100%;border-radius:6px;overflow:hidden'>" +
+      "<thead><tr>" +
+        "<th style='" + TH + "'>#</th>" +
+        "<th style='" + TH + "'>Part Number</th>" +
+        "<th style='" + TH + "'>Description</th>" +
+        extraHeaders +
+        "<th style='" + TH + ";text-align:center'>Qty</th>" +
+      "</tr></thead>" +
+      "<tbody>" + rows + "</tbody></table>";
+  }).join("");
+
+  return "<p style='font-family:sans-serif;font-size:14px'>Hello,</p>" +
+    "<p style='font-family:sans-serif;font-size:14px'>Can you please order:</p>" +
+    sections +
+    "<p style='font-family:sans-serif;font-size:14px;margin-top:24px'>Thank you</p>";
+}
+
 // ── Manual reorder ────────────────────────────────────────────────────────────
 function handleManualReorder(body) {
   var requester = (body.requester || "").toString().trim();
@@ -392,23 +438,10 @@ function handleManualReorder(body) {
   });
   oemOrder.sort();
 
-  var sections = oemOrder.map(function(oem) {
-    var lines = groups[oem].map(function(item, idx) {
-      return (idx + 1) + ") Part number = " + (item.partNumber || item.sku || "-") +
-             "    Description = " + item.description +
-             "    Qty x" + item.qty;
-    });
-    return oem + ":\n\n" + lines.join("\n");
-  });
-
   var note = requester ? " (requested by " + requester + ")" : "";
   var subject = "Stock order request" + note;
-  var emailBody =
-    "Hello,\n\nCan you please order:\n\n" +
-    sections.join("\n\n\n") +
-    "\n\nThank you";
 
-  MailApp.sendEmail(NOTIFY_EMAIL, subject, emailBody);
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, "", { htmlBody: buildOrderEmailHtml(groups, oemOrder, false) });
   return jsonResponse({ ok: true });
 }
 
@@ -496,24 +529,16 @@ function sendDailyReorderEmail() {
   });
   oemOrder.sort();
 
-  var sections = oemOrder.map(function(oem) {
-    var items = groups[oem];
-    var lines = items.map(function(item, idx) {
-      var qty = item.maxLevel > 0 ? item.maxLevel : 1;
-      return (idx + 1) + ") Part number = " + (item.sku || "-") +
-             "    Description = " + item.description +
-             "    Qty x" + qty;
+  // Add qty field (max level) for the email builder
+  oemOrder.forEach(function(oem) {
+    groups[oem].forEach(function(item) {
+      item.qty = item.maxLevel > 0 ? item.maxLevel : 1;
+      item.partNumber = item.sku;
     });
-    return oem + ":\n\n" + lines.join("\n");
   });
 
   var subject = "Stock reorder request";
-  var body    =
-    "Hello,\n\nCan you please order:\n\n" +
-    sections.join("\n\n\n") +
-    "\n\nThank you";
-
-  MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
+  MailApp.sendEmail(NOTIFY_EMAIL, subject, "", { htmlBody: buildOrderEmailHtml(groups, oemOrder, true) });
 }
 
 // Run this function ONCE from the Apps Script editor to install the 4:30 PM trigger.
