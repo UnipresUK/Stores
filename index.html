@@ -163,6 +163,8 @@ body {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
+.card-partno { font-size: 11px; color: var(--muted); font-family: monospace; letter-spacing: .3px; }
+
 /* In grid mode the loc-badge on the image covers it; hide text duplicate */
 .card-sku { display: none; }
 /* Show as bold text only in list/compact mode */
@@ -797,6 +799,7 @@ function cardHtml(p) {
     </div>
     <div class="card-body">
       <div class="card-name">${esc(p.description)}</div>
+      ${p.partNumber ? `<div class="card-partno">${esc(p.partNumber)}</div>` : ''}
       <div class="card-sku">${p.location ? esc(p.location) : ''}</div>
       <div class="stock-row">
         <span class="stock-badge ${badgeCls}">${badgeTxt}</span>
