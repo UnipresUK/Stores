@@ -158,7 +158,7 @@ function handleTakeStock(body) {
   appendStockLog(requester, sku, description, qty, newStock);
 
   if (result.minLevel > 0 && newStock <= result.minLevel) {
-    queueReorder(sku, description, result.location, newStock, result.minLevel, result.maxLevel);
+    queueReorder(sku, description, result.location, result.oem, newStock, result.minLevel, result.maxLevel);
   }
 
   if (isTakeEmailEnabled()) {
@@ -340,6 +340,7 @@ function deductStock(sku, qty) {
   var minCol  = headers.indexOf("min level");
   var maxCol  = headers.indexOf("max level");
   var locCol  = headers.indexOf("location");
+  var oemCol  = headers.indexOf("oem");
 
   if (skuCol < 0 || stkCol < 0) {
     throw new Error("Products sheet is missing a SKU or Current Stock column");
@@ -354,7 +355,8 @@ function deductStock(sku, qty) {
         newStock:  updated,
         minLevel:  minCol >= 0 ? Number(values[i][minCol]) || 0 : 0,
         maxLevel:  maxCol >= 0 ? Number(values[i][maxCol]) || 0 : 0,
-        location:  locCol >= 0 ? values[i][locCol].toString() : ""
+        location:  locCol >= 0 ? values[i][locCol].toString() : "",
+        oem:       oemCol >= 0 ? values[i][oemCol].toString() : ""
       };
     }
   }
@@ -375,29 +377,31 @@ function appendStockLog(requester, sku, description, qty, newStock) {
 }
 
 // ── Reorder queue ─────────────────────────────────────────────────────────────
-function queueReorder(sku, description, location, currentStock, minLevel, maxLevel) {
+function queueReorder(sku, description, location, oem, currentStock, minLevel, maxLevel) {
   var ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sheet = ss.getSheetByName(REORDER_QUEUE_SHEET);
   if (!sheet) {
     sheet = ss.insertSheet(REORDER_QUEUE_SHEET);
-    sheet.appendRow(["Timestamp", "SKU", "Description", "Location", "Current Stock", "Min Level", "Max Level", "Suggested Qty", "Sent"]);
-    sheet.getRange(1, 1, 1, 9).setFontWeight("bold");
+    sheet.appendRow(["Timestamp", "SKU", "Description", "Location", "OEM", "Current Stock", "Min Level", "Max Level", "Suggested Qty", "Sent"]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold");
     sheet.setFrozenRows(1);
   }
 
   var suggestedQty = Math.max(0, (Number(maxLevel) || 0) - (Number(currentStock) || 0));
   var values = sheet.getDataRange().getValues();
+  var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  var sentCol = headers.indexOf("sent");
 
   // Update existing unsent row for this SKU rather than duplicating
   for (var i = 1; i < values.length; i++) {
-    if (values[i][1].toString() === sku && !values[i][8]) {
-      sheet.getRange(i + 1, 5).setValue(currentStock);
-      sheet.getRange(i + 1, 8).setValue(suggestedQty);
+    if (values[i][1].toString() === sku && !values[i][sentCol >= 0 ? sentCol : 9]) {
+      sheet.getRange(i + 1, headers.indexOf("current stock") + 1).setValue(currentStock);
+      sheet.getRange(i + 1, headers.indexOf("suggested qty") + 1).setValue(suggestedQty);
       return;
     }
   }
 
-  sheet.appendRow([new Date(), sku, description, location, currentStock, minLevel, maxLevel, suggestedQty, false]);
+  sheet.appendRow([new Date(), sku, description, location, oem || "", currentStock, minLevel, maxLevel, suggestedQty, false]);
 }
 
 // Called by the 4:30 PM time-based trigger.
@@ -407,19 +411,33 @@ function sendDailyReorderEmail() {
   if (!sheet) return;
 
   var values  = sheet.getDataRange().getValues();
+  var headers = values[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  var col = {
+    sku:          headers.indexOf("sku"),
+    description:  headers.indexOf("description"),
+    location:     headers.indexOf("location"),
+    oem:          headers.indexOf("oem"),
+    currentStock: headers.indexOf("current stock"),
+    minLevel:     headers.indexOf("min level"),
+    maxLevel:     headers.indexOf("max level"),
+    suggestedQty: headers.indexOf("suggested qty"),
+    sent:         headers.indexOf("sent")
+  };
+
   var pending = [];
   var rows    = [];
 
   for (var i = 1; i < values.length; i++) {
-    if (!values[i][8]) {
+    if (!values[i][col.sent]) {
       pending.push({
-        sku:          values[i][1].toString(),
-        description:  values[i][2].toString(),
-        location:     values[i][3].toString(),
-        currentStock: values[i][4],
-        minLevel:     values[i][5],
-        maxLevel:     values[i][6],
-        suggestedQty: values[i][7]
+        sku:          values[i][col.sku].toString(),
+        description:  values[i][col.description].toString(),
+        location:     values[i][col.location].toString(),
+        oem:          col.oem >= 0 ? values[i][col.oem].toString() : "",
+        currentStock: values[i][col.currentStock],
+        minLevel:     values[i][col.minLevel],
+        maxLevel:     values[i][col.maxLevel],
+        suggestedQty: values[i][col.suggestedQty]
       });
       rows.push(i + 1);
     }
@@ -429,19 +447,36 @@ function sendDailyReorderEmail() {
 
   // Mark all as sent before emailing (avoids duplicate sends on retry)
   for (var j = 0; j < rows.length; j++) {
-    sheet.getRange(rows[j], 9).setValue(true);
+    sheet.getRange(rows[j], col.sent + 1).setValue(true);
   }
 
-  var lines = pending.map(function(item) {
-    var order = item.suggestedQty > 0 ? "  →  order " + item.suggestedQty + " (to reach max " + item.maxLevel + ")" : "";
-    return "  [" + item.location + "]  " + item.description +
-           "\n       Stock: " + item.currentStock + "  |  Min: " + item.minLevel + order;
+  // Group by OEM
+  var groups = {};
+  var oemOrder = [];
+  pending.forEach(function(item) {
+    var oem = item.oem || "Other";
+    if (!groups[oem]) { groups[oem] = []; oemOrder.push(oem); }
+    groups[oem].push(item);
+  });
+  oemOrder.sort();
+
+  var sections = oemOrder.map(function(oem) {
+    var items = groups[oem];
+    var lines = items.map(function(item) {
+      var order = item.suggestedQty > 0
+        ? "  →  order " + item.suggestedQty + " (max " + item.maxLevel + ")"
+        : "";
+      return "    [" + item.location + "]  " + item.description +
+             "\n         Stock: " + item.currentStock + "  |  Min: " + item.minLevel + order;
+    });
+    return oem + " (" + items.length + " item" + (items.length !== 1 ? "s" : "") + ")\n" +
+           lines.join("\n\n");
   });
 
   var subject = "Reorder alert — " + pending.length + " item" + (pending.length !== 1 ? "s" : "") + " below minimum";
   var body    =
-    "The following items hit their minimum stock level today and need reordering:\n\n" +
-    lines.join("\n\n") +
+    "Items at or below minimum stock level, grouped by OEM:\n\n" +
+    sections.join("\n\n──────────────────────\n\n") +
     "\n\nGenerated: " + new Date().toLocaleString();
 
   MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
