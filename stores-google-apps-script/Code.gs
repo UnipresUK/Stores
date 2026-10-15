@@ -463,7 +463,7 @@ function sendDailyReorderEmail() {
   var sections = oemOrder.map(function(oem) {
     var items = groups[oem];
     var lines = items.map(function(item, idx) {
-      var qty = item.suggestedQty > 0 ? item.suggestedQty : 1;
+      var qty = item.maxLevel > 0 ? item.maxLevel : 1;
       return (idx + 1) + ") Part number = " + (item.sku || "-") +
              "    Description = " + item.description +
              "    Qty x" + qty;
