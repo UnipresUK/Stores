@@ -1214,6 +1214,7 @@ function renderOrderBody() {
         <td><span class="ot-loc">${esc(p.location || '—')}</span></td>
         <td><div class="ot-name">${esc(p.description)}</div>
             ${p.partNumber ? `<div class="ot-part">${esc(p.partNumber)}</div>` : ''}</td>
+        <td style="text-align:center;font-weight:600;color:${Number(p.currentStock)===0?'var(--red)':Number(p.currentStock)<=Number(p.minLevel)?'var(--amber)':'var(--green)'}">${Number(p.currentStock)||0}</td>
         <td><input type="number" class="ot-qty order-qty" value="${maxQty}" min="1"
           data-sku="${esc(p.sku)}" onclick="event.stopPropagation()"></td>
       </tr>`;
@@ -1223,7 +1224,7 @@ function renderOrderBody() {
 
   body.innerHTML = `<table class="order-table">
     <thead><tr>
-      <th></th><th></th><th>Loc</th><th>Description / Part No.</th><th>Qty</th>
+      <th></th><th></th><th>Loc</th><th>Description / Part No.</th><th>Stock</th><th>Qty</th>
     </tr></thead>
     <tbody>${tableRows}</tbody>
   </table>`;
