@@ -379,12 +379,20 @@ function appendStockLog(requester, sku, description, qty, newStock) {
 
 // ── Shared email HTML builder ─────────────────────────────────────────────────
 function buildOrderEmailHtml(groups, oemOrder, showStock) {
-  var TH = "padding:8px 14px;text-align:left;background:#4f7ef8;color:#fff;font-family:sans-serif;font-size:13px;white-space:nowrap";
-  var TD = "padding:8px 14px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:13px;vertical-align:middle";
-  var TDc = TD + ";text-align:center;font-weight:700";
+  var TH   = "padding:8px 14px;text-align:left;background:#4f7ef8;color:#fff;font-family:sans-serif;font-size:13px;white-space:nowrap";
+  var TD   = "padding:8px 14px;border-bottom:1px solid #e5e7eb;font-family:sans-serif;font-size:13px;vertical-align:middle";
+  var TDc  = TD + ";text-align:center;font-weight:700";
+  var TOEM = "padding:8px 14px;font-family:sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:#eef2ff;color:#4f7ef8;border-bottom:1px solid #c7d2fe";
 
-  var sections = oemOrder.map(function(oem) {
-    var rows = groups[oem].map(function(item, idx) {
+  var extraHeaders = showStock
+    ? "<th style='" + TH + "'>Location</th><th style='" + TH + "'>In Stock</th>"
+    : "";
+
+  var colCount = showStock ? 6 : 4;
+
+  // Build all rows across all OEMs into one table
+  var allRows = oemOrder.map(function(oem) {
+    var dataRows = groups[oem].map(function(item, idx) {
       var qty    = item.qty !== undefined ? item.qty : (item.maxLevel > 0 ? item.maxLevel : 1);
       var partNo = item.partNumber || "";
       var link   = (item.supplierLink || "").trim();
@@ -407,26 +415,25 @@ function buildOrderEmailHtml(groups, oemOrder, showStock) {
         "</tr>";
     }).join("");
 
-    var extraHeaders = showStock
-      ? "<th style='" + TH + "'>Location</th><th style='" + TH + "'>In Stock</th>"
-      : "";
-
-    return "<h3 style='font-family:sans-serif;font-size:15px;color:#1a2035;margin:24px 0 8px'>" + oem + "</h3>" +
-      "<table style='border-collapse:collapse;width:100%;border-radius:6px;overflow:hidden'>" +
-      "<thead><tr>" +
-        "<th style='" + TH + "'>#</th>" +
-        "<th style='" + TH + "'>Part Number</th>" +
-        "<th style='" + TH + "'>Description</th>" +
-        extraHeaders +
-        "<th style='" + TH + "'>Datasheet</th>" +
-        "<th style='" + TH + ";text-align:center'>Qty</th>" +
-      "</tr></thead>" +
-      "<tbody>" + rows + "</tbody></table>";
+    var oemRow = "<tr><td colspan='" + colCount + "' style='" + TOEM + "'>" + oem + "</td></tr>";
+    return oemRow + dataRows;
   }).join("");
+
+  var table =
+    "<table style='border-collapse:collapse;width:100%'>" +
+    "<thead><tr>" +
+      "<th style='" + TH + "'>#</th>" +
+      "<th style='" + TH + "'>Part Number</th>" +
+      "<th style='" + TH + "'>Description</th>" +
+      extraHeaders +
+      "<th style='" + TH + "'>Datasheet</th>" +
+      "<th style='" + TH + ";text-align:center'>Qty</th>" +
+    "</tr></thead>" +
+    "<tbody>" + allRows + "</tbody></table>";
 
   return "<p style='font-family:sans-serif;font-size:14px'>Hello,</p>" +
     "<p style='font-family:sans-serif;font-size:14px'>Can you please order:</p>" +
-    sections +
+    table +
     "<p style='font-family:sans-serif;font-size:14px;margin-top:24px'>Thank you</p>";
 }
 
