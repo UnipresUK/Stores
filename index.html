@@ -1150,12 +1150,12 @@ function toggleOrderStockouts() {
 }
 
 function selectAllOrderRows() {
-  const rows = [...document.querySelectorAll('#order-body tr:not(.oem-head)')];
-  const allChecked = rows.every(r => r.querySelector('.order-check').checked);
-  rows.forEach(r => {
-    const cb = r.querySelector('.order-check');
+  const cbs = [...document.querySelectorAll('#order-body .order-check')];
+  if (!cbs.length) return;
+  const allChecked = cbs.every(cb => cb.checked);
+  cbs.forEach(cb => {
     cb.checked = !allChecked;
-    r.classList.toggle('selected', cb.checked);
+    cb.closest('tr').classList.toggle('selected', cb.checked);
   });
   updateOrderCount();
 }
