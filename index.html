@@ -530,7 +530,8 @@ body {
       <button class="sort-chip active" data-osort="location" onclick="setOrderSort('location')">Location</button>
       <button class="sort-chip" data-osort="name" onclick="setOrderSort('name')">Name</button>
       <span class="sort-label" style="margin-left:10px">Show:</span>
-      <button class="sort-chip" id="order-oos-chip" onclick="toggleOrderStockouts()">Stockouts only</button>
+      <button class="sort-chip" id="order-oos-chip" onclick="setOrderStockFilter('out')">Stockouts</button>
+      <button class="sort-chip" id="order-low-chip" onclick="setOrderStockFilter('low')">Low stock</button>
     </div>
     <div class="chip-bar" id="order-cat-bar" style="padding:4px 16px 8px"></div>
   </div>
@@ -1101,20 +1102,21 @@ async function saveStockTake() {
 }
 
 // ── Manual Order ─────────────────────────────────────────────────────────────
-let orderSort          = 'location';
-let orderCategory      = '';
-let orderStockoutsOnly = false;
+let orderSort        = 'location';
+let orderCategory    = '';
+let orderStockFilter = ''; // '' | 'out' | 'low'
 
 function openManualOrder() {
   const code = prompt('Enter passcode to open manual order:');
   if (code === null) return;
   if (code !== PASSCODE) { toast('Incorrect passcode', 'error'); return; }
 
-  orderSort          = 'location';
-  orderCategory      = '';
-  orderStockoutsOnly = false;
+  orderSort        = 'location';
+  orderCategory    = '';
+  orderStockFilter = '';
   document.getElementById('order-search').value = '';
   document.getElementById('order-oos-chip').classList.remove('active');
+  document.getElementById('order-low-chip').classList.remove('active');
 
   // Build category chips
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
@@ -1143,9 +1145,10 @@ function setOrderCategory(c) {
   renderOrderBody();
 }
 
-function toggleOrderStockouts() {
-  orderStockoutsOnly = !orderStockoutsOnly;
-  document.getElementById('order-oos-chip').classList.toggle('active', orderStockoutsOnly);
+function setOrderStockFilter(f) {
+  orderStockFilter = orderStockFilter === f ? '' : f;
+  document.getElementById('order-oos-chip').classList.toggle('active', orderStockFilter === 'out');
+  document.getElementById('order-low-chip').classList.toggle('active', orderStockFilter === 'low');
   renderOrderBody();
 }
 
@@ -1164,7 +1167,11 @@ function renderOrderBody() {
   const q = (document.getElementById('order-search').value || '').toLowerCase();
 
   let filtered = products.filter(p => {
-    if (orderStockoutsOnly && Number(p.currentStock) > 0) return false;
+    if (orderStockFilter === 'out' && Number(p.currentStock) > 0) return false;
+    if (orderStockFilter === 'low') {
+      const s = Number(p.currentStock), m = Number(p.minLevel);
+      if (!(m > 0 && s > 0 && s <= m)) return false;
+    }
     if (orderCategory && p.category !== orderCategory) return false;
     if (q) {
       const hay = (p.description + ' ' + p.partNumber + ' ' + p.location + ' ' + p.oem).toLowerCase();
