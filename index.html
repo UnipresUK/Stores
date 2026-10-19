@@ -529,12 +529,15 @@ body {
       <span class="sort-label">Sort:</span>
       <button class="sort-chip active" data-osort="location" onclick="setOrderSort('location')">Location</button>
       <button class="sort-chip" data-osort="name" onclick="setOrderSort('name')">Name</button>
+      <span class="sort-label" style="margin-left:10px">Show:</span>
+      <button class="sort-chip" id="order-oos-chip" onclick="toggleOrderStockouts()">Stockouts only</button>
     </div>
     <div class="chip-bar" id="order-cat-bar" style="padding:4px 16px 8px"></div>
   </div>
   <div class="st-body" id="order-body"></div>
   <div class="st-footer">
-    <button class="btn-cancel" onclick="closeManualOrder()">Cancel</button>
+    <button class="btn-cancel" onclick="selectAllOrderRows()">Select all</button>
+    <button class="btn-cancel" onclick="closeManualOrder()" style="flex:0.6">Cancel</button>
     <button class="btn-confirm" id="order-send-btn" onclick="sendManualOrder()">Send Order Email</button>
   </div>
 </div>
@@ -1098,17 +1101,20 @@ async function saveStockTake() {
 }
 
 // ── Manual Order ─────────────────────────────────────────────────────────────
-let orderSort     = 'location';
-let orderCategory = '';
+let orderSort          = 'location';
+let orderCategory      = '';
+let orderStockoutsOnly = false;
 
 function openManualOrder() {
   const code = prompt('Enter passcode to open manual order:');
   if (code === null) return;
   if (code !== PASSCODE) { toast('Incorrect passcode', 'error'); return; }
 
-  orderSort     = 'location';
-  orderCategory = '';
+  orderSort          = 'location';
+  orderCategory      = '';
+  orderStockoutsOnly = false;
   document.getElementById('order-search').value = '';
+  document.getElementById('order-oos-chip').classList.remove('active');
 
   // Build category chips
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
@@ -1137,10 +1143,28 @@ function setOrderCategory(c) {
   renderOrderBody();
 }
 
+function toggleOrderStockouts() {
+  orderStockoutsOnly = !orderStockoutsOnly;
+  document.getElementById('order-oos-chip').classList.toggle('active', orderStockoutsOnly);
+  renderOrderBody();
+}
+
+function selectAllOrderRows() {
+  const rows = [...document.querySelectorAll('#order-body tr:not(.oem-head)')];
+  const allChecked = rows.every(r => r.querySelector('.order-check').checked);
+  rows.forEach(r => {
+    const cb = r.querySelector('.order-check');
+    cb.checked = !allChecked;
+    r.classList.toggle('selected', cb.checked);
+  });
+  updateOrderCount();
+}
+
 function renderOrderBody() {
   const q = (document.getElementById('order-search').value || '').toLowerCase();
 
   let filtered = products.filter(p => {
+    if (orderStockoutsOnly && Number(p.currentStock) > 0) return false;
     if (orderCategory && p.category !== orderCategory) return false;
     if (q) {
       const hay = (p.description + ' ' + p.partNumber + ' ' + p.location + ' ' + p.oem).toLowerCase();
